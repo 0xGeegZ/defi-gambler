@@ -11,7 +11,11 @@ import "./interfaces/IPancakeRouter02.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/PancakeLibrary.sol";
 
-//https://github.com/Morpher-io/MorpherProtocol/blob/master/contracts/MorpherStaking.sol
+// https://github.com/Morpher-io/MorpherProtocol/blob/master/contracts/MorpherStaking.sol
+// https://github.com/ApeSwapFinance/apeswap-swap-periphery/blob/master/contracts/examples/ExampleSwapToPrice.sol
+
+// https://github.com/pancakeswap/pancake-swap-periphery/blob/master/contracts/examples/ExampleSwapToPrice.sol
+
 contract PancakeDeposit {
     using SafeMath for uint256;
 
