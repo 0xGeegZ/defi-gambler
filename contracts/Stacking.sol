@@ -1,8 +1,14 @@
 pragma solidity 0.6.6;
 
-import "./Ownable.sol";
-import "./SafeMath.sol";
-import "./IState.sol";
+import "./interfaces/IState.sol";
+
+// import "./Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+// import "./libraries/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/math/SafeMath.sol";
 
 // ----------------------------------------------------------------------------------
 // Staking Token generates interest
@@ -273,7 +279,13 @@ contract Staking is Ownable {
     // Don't accept ETH
     // ------------------------------------------------------------------------
 
-    function() external payable {
+    // fallback() external payable — when no other function matches (not even the receive function). Optionally payable.
+    fallback() external payable {
+        revert("Staking: you can't deposit Ether here");
+    }
+
+    // receive() external payable — for empty calldata (and any value)
+    receive() external payable {
         revert("Staking: you can't deposit Ether here");
     }
 }

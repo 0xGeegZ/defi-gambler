@@ -518,10 +518,12 @@ contract Dice is VRFConsumerBase {
     // SECTION II: BET & BET PROCESSING
     //function() {
     receive() external payable {
-        bet(0);
+        // bet(0);
+        bet();
     }
 
-    function bet(uint256 userProvidedSeed)
+    // function bet(uint256 userProvidedSeed)
+    function bet()
         public
         payable
         onlyIfNotStopped
@@ -547,11 +549,12 @@ contract Dice is VRFConsumerBase {
 
             //TODO Add this line require(s_results[roller] == 0, "Already rolled");
 
-            bytes32 myid = requestRandomness(
-                s_keyHash,
-                s_fee,
-                userProvidedSeed
-            );
+            // bytes32 myid = requestRandomness(
+            //     s_keyHash,
+            //     s_fee,
+            //     userProvidedSeed
+            // );
+            bytes32 myid = requestRandomness(s_keyHash, s_fee);
 
             //TODO : Call __callback method after generating random number
 

@@ -8,8 +8,12 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/IPancakeRouter02.sol";
-import "./libraries/SafeMath.sol";
 import "./libraries/PancakeLibrary.sol";
+
+// import "./libraries/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/math/SafeMath.sol";
 
 // https://github.com/Morpher-io/MorpherProtocol/blob/master/contracts/MorpherStaking.sol
 // https://github.com/ApeSwapFinance/apeswap-swap-periphery/blob/master/contracts/examples/ExampleSwapToPrice.sol
@@ -26,7 +30,8 @@ contract PancakeDeposit {
     address public owner;
     address[] public depositers;
 
-    constructor(address factory_, IPancakeRouter01 router_) public {
+    // constructor(address factory_, IPancakeRouter01 router_) public {
+    constructor(address factory_, IPancakeRouter02 router_) public {
         factory = factory_;
         router = router_;
 
