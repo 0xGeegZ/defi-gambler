@@ -120,5 +120,11 @@ dist
 
 
 # Solidity
-build/
-exemples/
+/build/
+/exemples/
+
+#Buidler files
+cache
+artifacts
+coverage
+coverage.json

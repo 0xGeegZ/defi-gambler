@@ -29,6 +29,13 @@ contract Stacking {
     uint256 public totalInvested;
     uint256 public bankValue;
 
+    // https://bsc.kiemtienonline360.com/
+    // ******* TESTNET *******
+    // IERC20 public cake = IERC20(0x7ef95a0fee0dd31b22626fa2e10ee6a223f8a684); // USD
+    // CakeChef public cakeChef =
+    //     CakeChef(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3); //PancakeRouter
+
+    // ******* MAINNET *******
     IERC20 public cake = IERC20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
     CakeChef public cakeChef =
         CakeChef(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
@@ -241,6 +248,7 @@ contract Stacking {
         //transfert amount to user
         cake.transfer(msg.sender, amount);
 
+        //TODO let bank value in Cake or convert it to BUSD ?
         _harvest();
 
         //TODO emit event
