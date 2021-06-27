@@ -1,32 +1,20 @@
 pragma solidity ^0.6.6;
 
+//Use this for visual sutdio code IDE
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-interface CakeChef {
-    function deposit(uint256 _pid, uint256 _amount) external;
+//Use this for remix IDE
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/token/ERC20/IERC20.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/math/SafeMath.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/math/Math.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/math/Math.sol";
+// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/token/ERC20/SafeERC20.sol";
 
-    function enterStaking(uint256 _amount) external;
-
-    function leaveStaking(uint256 _amount) external;
-
-    function pendingCake(uint256 _pid, address _user)
-        external
-        view
-        returns (uint256);
-
-    function poolLength() external view returns (uint256);
-
-    function withdraw(uint256 _pid, uint256 _amount) external;
-
-    function getMultiplier(uint256 _from, uint256 _to)
-        external
-        view
-        returns (uint256);
-}
+import "./interfaces/ICakeChef.sol";
 
 contract Stacking {
     using SafeERC20 for IERC20;
