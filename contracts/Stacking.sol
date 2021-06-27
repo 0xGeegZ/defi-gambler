@@ -1,291 +1,304 @@
-pragma solidity 0.6.6;
+pragma solidity ^0.6.6;
 
-import "./interfaces/IState.sol";
-
-// import "./Ownable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-// import "./libraries/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/math/SafeMath.sol";
+interface CakeChef {
+    function deposit(uint256 _pid, uint256 _amount) external;
 
-// ----------------------------------------------------------------------------------
-// Staking Token generates interest
-// The interest is set to 0.015% a day or ~5.475% in the first year
-// Stakers will be able to vote on all ProtocolDecisions in Governance (soon...)
-// There is a lockup after staking or topping up (30 days) and a minimum stake (100k MPH)
-// ----------------------------------------------------------------------------------
+    function enterStaking(uint256 _amount) external;
 
-contract Staking is Ownable {
+    function leaveStaking(uint256 _amount) external;
+
+    function pendingCake(uint256 _pid, address _user)
+        external
+        view
+        returns (uint256);
+
+    function poolLength() external view returns (uint256);
+
+    function withdraw(uint256 _pid, uint256 _amount) external;
+
+    function getMultiplier(uint256 _from, uint256 _to)
+        external
+        view
+        returns (uint256);
+}
+
+contract Stacking {
+    using SafeERC20 for IERC20;
+    using Address for address;
     using SafeMath for uint256;
-    IState state;
+    using Math for uint256;
 
-    uint256 constant PRECISION = 10**8;
-    uint256 constant INTERVAL = 1 days;
+    address public admin;
+    address private houseAddress;
+    bool public isStopped;
+    // uint256 public investorsCount;
+    uint256 public totalInvested;
+    uint256 public bankValue;
 
-    //mapping(address => uint256) private poolShares;
-    //mapping(address => uint256) private lockup;
+    IERC20 public cake = IERC20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
+    CakeChef public cakeChef =
+        CakeChef(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 
-    uint256 public poolShareValue = PRECISION;
-    uint256 public lastReward;
-    uint256 public totalShares;
-    uint256 public interestRate = 15000; // 0.015% per day initially, diminishing returns over time
-    uint256 public lockupPeriod = 30 days; // to prevent tactical staking and ensure smooth governance
-    uint256 public minimumStake = 10**23; // 100k MPH minimum
+    // Info of each user.
+    //TODO manage array of Stacks and array of Bet
+    struct Investor {
+        uint256 amount; // How many LP tokens the user has provided.
+        uint256 minTimeToWithdraw; // 604800 = 1 week
+        uint8 flag;
+        uint256 startBlockNumber;
+        uint256 stopBlockNumber;
+        uint256 rewards;
+        bool isWin;
+        //TODO add multiplier
+    }
 
-    address public stakingAdmin;
+    // mapping(uint256 => mapping(address => UserInfo)) public userInfo;
+    mapping(address => Investor) public investors;
 
-    address public stakingAddress = 0x2222222222222222222222222222222222222222;
-    bytes32 public marketIdStakingMPH =
-        0x9a31fdde7a3b1444b1befb10735dcc3b72cbd9dd604d2ff45144352bf0f359a6; //STAKING_MPH
+    constructor() public {
+        admin = msg.sender;
+        houseAddress = msg.sender;
+        isStopped = false;
+        totalInvested = 0;
+        bankValue = 0;
+    }
 
     // ----------------------------------------------------------------------------
-    // Events
+    // MODIFIERS
     // ----------------------------------------------------------------------------
-    event SetInterestRate(uint256 newInterestRate);
-    event SetLockupPeriod(uint256 newLockupPeriod);
-    event SetMinimumStake(uint256 newMinimumStake);
-    event LinkState(address stateAddress);
-    event SetStakingAdmin(address stakingAdmin);
 
-    event PoolShareValueUpdated(
-        uint256 indexed lastReward,
-        uint256 poolShareValue
-    );
-    event StakingRewardsMinted(uint256 indexed lastReward, uint256 delta);
-    event Staked(
-        address indexed userAddress,
-        uint256 indexed amount,
-        uint256 poolShares,
-        uint256 lockedUntil
-    );
-    event Unstaked(
-        address indexed userAddress,
-        uint256 indexed amount,
-        uint256 poolShares
-    );
+    modifier onlyIfNotStopped {
+        if (isStopped) require(false, "Contract is stopped");
+        _;
+    }
 
-    modifier onlyStakingAdmin {
+    modifier onlyIfStopped {
+        if (!isStopped) require(false, "Contract is not stopped");
+        _;
+    }
+
+    modifier onlyInvestors {
+        // if (investors[msg.sender] == msg.sender)
+        if (investors[msg.sender].flag != 1)
+            require(false, "Only for investors");
+        _;
+    }
+
+    modifier onlyNotInvestors {
+        if (investors[msg.sender].flag == 1)
+            require(false, "Only for not investors");
+        _;
+    }
+
+    modifier onlyAdmin {
+        if (admin != msg.sender) require(false, "Only for admin");
+        _;
+    }
+
+    modifier onlyTimelockDone {
         require(
-            msg.sender == stakingAdmin,
-            "Staking: can only be called by Staking Administrator."
+            (investors[msg.sender].minTimeToWithdraw) < block.timestamp,
+            "too early!"
         );
         _;
     }
 
-    constructor(address _State, address _stakingAdmin) public {
-        setStakingAdmin(_stakingAdmin);
-        setStateAddress(_State);
-        emit SetLockupPeriod(lockupPeriod);
-        emit SetMinimumStake(minimumStake);
-        emit SetInterestRate(interestRate);
-        lastReward = now;
-        // missing: transferOwnership to Governance once deployed
+    modifier onlyTotalAmount {
+        require((investors[msg.sender].amount) > msg.value, "too big amount!");
+        require(
+            (investors[msg.sender].amount) < msg.value,
+            "too small amount!"
+        );
+        _;
     }
 
     // ----------------------------------------------------------------------------
-    // updatePoolShareValue
-    // Updates the value of the Pool Shares and returns the new value.
-    // Staking rewards are linear, there is no compound interest.
+    // CONTRACT MANAGEMENT
     // ----------------------------------------------------------------------------
 
-    function updatePoolShareValue()
-        public
-        returns (uint256 _newPoolShareValue)
+    function stopContract() public onlyAdmin {
+        isStopped = true;
+    }
+
+    function resumeContract() public onlyAdmin {
+        isStopped = false;
+    }
+
+    function changeHouseAddress(address newHouse) public onlyAdmin {
+        houseAddress = newHouse;
+    }
+
+    function changeAdminAddress(address newAdmin) public onlyAdmin {
+        admin = newAdmin;
+    }
+
+    function pending() external view onlyAdmin returns (uint256) {
+        return cakeChef.pendingCake(0, address(this));
+    }
+
+    function harvest() external onlyAdmin {
+        cakeChef.leaveStaking(0);
+        _harvest();
+    }
+
+    function unstakeBank() external onlyAdmin {
+        cakeChef.leaveStaking(bankValue);
+    }
+
+    function unstakeAll() external onlyAdmin {
+        uint256 total = totalInvested + bankValue;
+        cakeChef.leaveStaking(total);
+    }
+
+    // ----------------------------------------------------------------------------
+    // EXTERNALS FUNCTIONS
+    // ----------------------------------------------------------------------------
+    function stake() external payable onlyNotInvestors {
+        _stake(msg.value);
+    }
+
+    function unstake()
+        external
+        payable
+        onlyInvestors
+        onlyTimelockDone
+        onlyTotalAmount
     {
-        if (now >= lastReward.add(INTERVAL)) {
-            uint256 _numOfIntervals = now.sub(lastReward).div(INTERVAL);
-            poolShareValue = poolShareValue.add(
-                _numOfIntervals.mul(interestRate)
-            );
-            lastReward = lastReward.add(_numOfIntervals.mul(INTERVAL));
-            emit PoolShareValueUpdated(lastReward, poolShareValue);
-        }
-        mintStakingRewards();
-        return poolShareValue;
+        _unstake(msg.value);
     }
 
-    // ----------------------------------------------------------------------------
-    // Staking rewards are minted if necessary
-    // ----------------------------------------------------------------------------
-
-    function mintStakingRewards() private {
-        uint256 _targetBalance = poolShareValue.mul(totalShares);
-        if (state.balanceOf(stakingAddress) < _targetBalance) {
-            // If there are not enough token held by the contract, mint them
-            uint256 _delta = _targetBalance.sub(
-                state.balanceOf(stakingAddress)
-            );
-            state.mint(stakingAddress, _delta);
-            emit StakingRewardsMinted(lastReward, _delta);
-        }
+    function balance() external view onlyInvestors returns (uint256) {
+        return investors[msg.sender].amount;
     }
 
-    // ----------------------------------------------------------------------------
-    // stake(uint256 _amount)
-    // User specifies an amount they intend to stake. Pool Shares are issued accordingly
-    // and the _amount is transferred to the staking contract
-    // ----------------------------------------------------------------------------
-
-    function stake(uint256 _amount) public returns (uint256 _poolShares) {
-        require(
-            state.balanceOf(msg.sender) >= _amount,
-            "Staking: insufficient MPH token balance"
-        );
-        updatePoolShareValue();
-        _poolShares = _amount.div(poolShareValue);
-        (uint256 _numOfShares, , , , , ) = state.getPosition(
-            msg.sender,
-            marketIdStakingMPH
-        );
-        require(
-            minimumStake <= _numOfShares.add(_poolShares).mul(poolShareValue),
-            "Staking: stake amount lower than minimum stake"
-        );
-        state.transfer(
-            msg.sender,
-            stakingAddress,
-            _poolShares.mul(poolShareValue)
-        );
-        totalShares = totalShares.add(_poolShares);
-        state.setPosition(
-            msg.sender,
-            marketIdStakingMPH,
-            now.add(lockupPeriod),
-            _numOfShares.add(_poolShares),
-            0,
-            0,
-            0,
-            0,
-            0
-        );
-        emit Staked(msg.sender, _amount, _poolShares, now.add(lockupPeriod));
-        return _poolShares;
-    }
+    //TODO add spend function for benefices for admin
+    // function spend(uint256 amount, address recipient) external onlyAdmin{
+    //     require(msg.sender == admin, "only admin");
+    //     uint256 balanceShares = cakeChef.balanceOf(address(this));
+    //     cakeChef.leaveStaking(balanceShares);
+    //     cake.transfer(recipient, amount);
+    //     uint256 balanceDai = cake.balanceOf(address(this));
+    //     if (balanceDai > 0) {
+    //         _save(balanceDai);
+    //     }
+    // }
 
     // ----------------------------------------------------------------------------
-    // unstake(uint256 _amount)
-    // User specifies number of Pool Shares they want to unstake.
-    // Pool Shares get deleted and the user receives their MPH plus interest
+    // INTERNAL FUNCTIONS
     // ----------------------------------------------------------------------------
-
-    function unstake(uint256 _numOfShares) public returns (uint256 _amount) {
-        (uint256 _numOfExistingShares, , , , , ) = state.getPosition(
-            msg.sender,
-            marketIdStakingMPH
-        );
-        require(
-            _numOfShares <= _numOfExistingShares,
-            "Staking: insufficient pool shares"
-        );
-
-        uint256 lockedInUntil = state.getLastUpdated(
-            msg.sender,
-            marketIdStakingMPH
-        );
-        require(
-            now >= lockedInUntil,
-            "Staking: cannot unstake before lockup expiration"
-        );
-        updatePoolShareValue();
-        state.setPosition(
-            msg.sender,
-            marketIdStakingMPH,
-            lockedInUntil,
-            _numOfExistingShares.sub(_numOfShares),
-            0,
-            0,
-            0,
-            0,
-            0
-        );
-        totalShares = totalShares.sub(_numOfShares);
-        _amount = _numOfShares.mul(poolShareValue);
-        state.transfer(stakingAddress, msg.sender, _amount);
-        emit Unstaked(msg.sender, _amount, _numOfShares);
-        return _amount;
-    }
-
-    // ----------------------------------------------------------------------------
-    // Administrative functions
-    // ----------------------------------------------------------------------------
-
-    function setStakingAdmin(address _address) public onlyOwner {
-        stakingAdmin = _address;
-        emit SetStakingAdmin(_address);
-    }
-
-    function setStateAddress(address _stateAddress) public onlyOwner {
-        state = IState(_stateAddress);
-        emit LinkState(_stateAddress);
-    }
-
-    function setInterestRate(uint256 _interestRate) public onlyStakingAdmin {
-        interestRate = _interestRate;
-        emit SetInterestRate(_interestRate);
-    }
-
-    function setLockupPeriodRate(uint256 _lockupPeriod)
-        public
-        onlyStakingAdmin
-    {
-        lockupPeriod = _lockupPeriod;
-        emit SetLockupPeriod(_lockupPeriod);
-    }
-
-    function setMinimumStake(uint256 _minimumStake) public onlyStakingAdmin {
-        minimumStake = _minimumStake;
-        emit SetMinimumStake(_minimumStake);
-    }
-
-    // ----------------------------------------------------------------------------
-    // Getter functions
-    // ----------------------------------------------------------------------------
-
-    function getTotalPooledValue() public view returns (uint256 _totalPooled) {
-        // Only accurate if poolShareValue is up to date
-        return poolShareValue.mul(totalShares);
-    }
-
-    function getStake(address _address)
-        public
+    function _addInvestor(uint256 amount)
+        internal
         view
-        returns (uint256 _poolShares)
+        returns (Investor memory)
     {
-        (uint256 _numOfShares, , , , , ) = state.getPosition(
-            _address,
-            marketIdStakingMPH
-        );
-        return _numOfShares;
+        // inverstorsCount++;
+        //TODO update rewards with betted value
+        return Investor(amount, 604800, 1, block.number, 0, 0, false); //604800 = 1 week
     }
 
-    function getStakeValue(address _address)
-        public
-        view
-        returns (uint256 _value, uint256 _lastUpdate)
-    {
-        // Only accurate if poolShareValue is up to date
+    function _stake(uint256 amount) internal {
+        cake.transferFrom(msg.sender, address(this), amount);
+        cake.approve(address(cakeChef), amount);
+        cakeChef.enterStaking(amount);
 
-        (uint256 _numOfShares, , , , , ) = state.getPosition(
-            _address,
-            marketIdStakingMPH
-        );
+        investors[msg.sender] = _addInvestor(amount);
 
-        return (_numOfShares.mul(poolShareValue), lastReward);
+        totalInvested += amount;
+        //TODO emit event
     }
 
-    // ------------------------------------------------------------------------
-    // Don't accept ETH
-    // ------------------------------------------------------------------------
+    function _unstake(uint256 amount) internal {
+        investors[msg.sender].stopBlockNumber = block.number;
 
+        //auto harverst
+        cakeChef.leaveStaking(amount);
+
+        //updating bank value with rewards
+        uint256 rewards = cakeChef.getMultiplier(
+            investors[msg.sender].startBlockNumber,
+            investors[msg.sender].stopBlockNumber
+        );
+
+        //TODO check if bank rewards are negative and pause it if it's true;
+        if (investors[msg.sender].rewards > rewards) {
+            stopContract();
+            require(false, "Contract is stopped");
+        }
+
+        uint256 bankRewards = investors[msg.sender].isWin
+            ? rewards - investors[msg.sender].rewards
+            : rewards;
+
+        bankValue += bankRewards;
+
+        //remove amount from investors for investor
+
+        // TODO allow to remove less than investor amount ??
+        // uint256 newAmount = investors[msg.sender].amount;
+        // investors[msg.sender].amount = newAmount.sub(amount);
+
+        //TODO keep investor in investrors ??
+        // investors[msg.sender].amount = 0;
+        // investors[msg.sender].flag = 0;
+
+        delete investors[msg.sender];
+        totalInvested += amount;
+
+        //transfert amount to user
+        cake.transfer(msg.sender, amount);
+
+        _harvest();
+
+        //TODO emit event
+    }
+
+    function _harvest() internal {
+        //if cakes in contract balance (fees & stacking rewards), stack it
+        uint256 balanceCake = cake.balanceOf(address(this));
+        if (balanceCake > 0) {
+            bankValue += balanceCake;
+            cakeChef.enterStaking(balanceCake);
+        }
+    }
+
+    // *********  START StrategyACryptoSCakeV2b  *********
+    // function _stakeCake() internal {
+    //     uint256 _want = IERC20(cake).balanceOf(address(this));
+    //     IERC20(cake).safeApprove(cakeChef, 0);
+    //     IERC20(cake).safeApprove(cakeChef, _want);
+    //     CakeChef(cakeChef).enterStaking(_want);
+    // }
+    // function _payFees(uint256 _want) internal {
+    //     uint256 _fee = _want.mul(performanceFee).div(FEE_DENOMINATOR);
+    //     uint256 _reward = _want.mul(strategistReward).div(FEE_DENOMINATOR);
+    //     IERC20(want).safeTransfer(IController(controller).rewards(), _fee);
+    //     IERC20(want).safeTransfer(strategist, _reward);
+    // }
+    // *********  END StrategyACryptoSCakeV2b  *********
+
+    // ----------------------------------------------------------------------------
+    // DEFAULT FUNCTIONS
+    // ----------------------------------------------------------------------------
+
+    /**
+     * @dev fallback function ***DO NOT OVERRIDE***
+     */
     // fallback() external payable — when no other function matches (not even the receive function). Optionally payable.
     fallback() external payable {
-        revert("Staking: you can't deposit Ether here");
+        _stake(msg.value);
     }
 
+    /**
+     * @dev receive function ***DO NOT OVERRIDE***
+     */
     // receive() external payable — for empty calldata (and any value)
     receive() external payable {
-        revert("Staking: you can't deposit Ether here");
+        _stake(msg.value);
     }
 }

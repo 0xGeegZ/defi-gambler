@@ -1,3 +1,36 @@
+# Auto Farm - AutoCake Wault
+
+StratX2 : https://github.com/autofarmnetwork/AutofarmV2_CrossChain/blob/master/StratX2.sol
+StratX : https://bscscan.com/address/0x1004a537A1C39EE9D38110bFe3042627C2cD5BBE#code
+
+Explanation of StarX Contract (used by AutoFarm)
+https://solidity.finance/audits/CakeCrypt/
+
+## StrategyACryptoSCakeV2b
+
+https://bscscan.com/address/0x4Fb1ba482A7F66863317452D0835d87aD8AB17f5#code
+[Very Interisting] Strategy to stake cake on pancake swap
+
+## Exemple Router exploiting PanCake Router
+
+https://bscscan.com/address/0xf4f72ffe7baf8eed0eb39f6cbaeee673441fe7b2#code
+
+## AUto Farm AUTO Vault Contract (StratX2_AUTO - minTimeToWithdraw) with TIEMLOCK
+
+https://bscscan.com/address/0xb27150dc6ee59ad4464cc7a89229b5870e568be2#code
+
+## Beefy Timelock
+
+https://github.com/beefyfinance/beefy-protocol/blob/master/contracts/TokenTimelock.sol
+
+# Coding: the address, private key, keystore, mnemonic of the generated account
+
+https://www.programmersought.com/article/89851301038/
+
+## create with ether.js
+
+https://ethereum.stackexchange.com/questions/52370/web3-create-account-from-mnemonic-passphrase
+
 # Chainlink Truffle Box
 
 <br/>
@@ -62,6 +95,7 @@ You can also run:
 ```bash
 truffle migrate --network kovan --reset
 ```
+
 If you want to use truffle commands.
 
 ### Local Blockchain
@@ -82,7 +116,7 @@ There are 3 helper scripts provided with this box in the scripts directory:
 - `request-data.js`
 - `read-contract.js`
 
-In addition, for working with Chainlink Price Feeds and ChainlinkVRF there are folders respectively. 
+In addition, for working with Chainlink Price Feeds and ChainlinkVRF there are folders respectively.
 
 They can be used by calling them from `npx truffle exec`, for example:
 

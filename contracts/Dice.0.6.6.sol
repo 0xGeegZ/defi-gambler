@@ -4,6 +4,8 @@ import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
 
 //import "@chainlink/contracts/src/v0.6/Owned.sol";
+// import "./Ownable.sol";
+// import "@openzepkpelin/contracts/access/Ownable.sol";
 
 /**
  * @notice A Chainlink VRF consumer which uses randomness to mimic the rolling
@@ -14,6 +16,7 @@ contract Dice is VRFConsumerBase {
 
     using SafeMathChainlink for uint256;
 
+    //TODO add verification with this constant
     uint256 private constant ROLL_IN_PROGRESS = 42;
 
     bytes32 private s_keyHash;
