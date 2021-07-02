@@ -8,18 +8,12 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 //TODO add https://docs.openzeppelin.com/contracts/2.x/api/lifecycle#pausable
-
-//Use this for remix IDE
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/token/ERC20/IERC20.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/math/SafeMath.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/math/Math.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/math/Math.sol";
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.1/contracts/token/ERC20/SafeERC20.sol";
+// import "@openzeppelin/contkracts/security/Pausable.sol";
 
 import "./interfaces/ICakeChef.sol";
 
 //https://bscscan.com/address/0x4bBfc7eFCd146E3dd1916Da99Fd72D4e5b3A55F1#code
-contract StackingV2 {
+contract VaultV0 {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -42,7 +36,7 @@ contract StackingV2 {
     address public constant cakeChef =
         address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 
-    address public governance;
+    address public owner;
     address public controller;
     address public strategist;
 
@@ -54,18 +48,15 @@ contract StackingV2 {
 
     bool public paused;
 
-    // constructor() public {
-    constructor(address _controller) public {
-        governance = msg.sender;
-
-        strategist = msg.sender;
-
+    constructor(address _controller, address _owner) public {
+        //TODO remove one of the three adresse
+        owner = _owner;
         controller = _controller;
-        // controller = msg.sender;
+        strategist = msg.sender;
     }
 
     function getName() external pure returns (string memory) {
-        return "Vault";
+        return "VaultV0";
     }
 
     function deposit() public {
@@ -115,12 +106,6 @@ contract StackingV2 {
         IERC20(want).safeTransfer(controller, _fee);
         require(controller != address(0), "!controller"); // additional protection so we don't burn the funds
         IERC20(want).safeTransfer(controller, _amount.sub(_fee));
-
-        // Old code
-        // IERC20(want).safeTransfer(IController(controller).rewards(), _fee);
-        // address _vault = IController(controller).vaults(address(want));
-        // require(_vault != address(0), "!vault"); // additional protection so we don't burn the funds
-        // IERC20(want).safeTransfer(_vault, _amount.sub(_fee));
     }
 
     function _withdrawSome(uint256 _amount) internal returns (uint256) {
@@ -139,7 +124,7 @@ contract StackingV2 {
         require(
             msg.sender == controller ||
                 msg.sender == strategist ||
-                msg.sender == governance,
+                msg.sender == owner,
             "!authorized"
         );
         _withdrawAll();
@@ -148,11 +133,6 @@ contract StackingV2 {
 
         require(controller != address(0), "!vault"); // additional protection so we don't burn the funds
         IERC20(want).safeTransfer(controller, balance);
-
-        // Old code
-        // address _vault = IController(controller).vaults(address(want));
-        // require(_vault != address(0), "!vault"); // additional protection so we don't burn the funds
-        // IERC20(want).safeTransfer(_vault, balance);
     }
 
     function _withdrawAll() internal {
@@ -176,7 +156,7 @@ contract StackingV2 {
     }
 
     function harvest() public returns (uint256 harvesterRewarded) {
-        // require(msg.sender == strategist || msg.sender == governance, "!authorized");
+        // require(msg.sender == strategist || msg.sender == owner, "!authorized");
         require(msg.sender == tx.origin, "not eoa");
 
         _stakeCake();
@@ -197,7 +177,6 @@ contract StackingV2 {
         uint256 _fee = _want.mul(performanceFee).div(FEE_DENOMINATOR);
         uint256 _reward = _want.mul(strategistReward).div(FEE_DENOMINATOR);
         IERC20(want).safeTransfer(controller, _fee);
-        // IERC20(want).safeTransfer(IController(controller).rewards(), _fee);
         IERC20(want).safeTransfer(strategist, _reward);
     }
 
@@ -208,64 +187,49 @@ contract StackingV2 {
                 .add(balanceOfPendingWant());
     }
 
-    function setGovernance(address _governance) external {
-        require(msg.sender == governance, "!governance");
-        governance = _governance;
+    function setOwner(address _owner) external {
+        require(msg.sender == owner, "!owner");
+        owner = _owner;
     }
 
     function setController(address _controller) external {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == owner, "!owner");
         controller = _controller;
     }
 
     function setStrategist(address _strategist) external {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == owner, "!owner");
         strategist = _strategist;
     }
 
     function setPerformanceFee(uint256 _performanceFee) external {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!authorized"
-        );
+        require(msg.sender == strategist || msg.sender == owner, "!authorized");
         performanceFee = _performanceFee;
     }
 
     function setStrategistReward(uint256 _strategistReward) external {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!authorized"
-        );
+        require(msg.sender == strategist || msg.sender == owner, "!authorized");
         strategistReward = _strategistReward;
     }
 
     function setWithdrawalFee(uint256 _withdrawalFee) external {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == owner, "!owner");
         withdrawalFee = _withdrawalFee;
     }
 
     function setHarvesterReward(uint256 _harvesterReward) external {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!authorized"
-        );
+        require(msg.sender == strategist || msg.sender == owner, "!authorized");
         harvesterReward = _harvesterReward;
     }
 
     function pause() external {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!authorized"
-        );
+        require(msg.sender == strategist || msg.sender == owner, "!authorized");
         _withdrawAll();
         paused = true;
     }
 
     function unpause() external {
-        require(
-            msg.sender == strategist || msg.sender == governance,
-            "!authorized"
-        );
+        require(msg.sender == strategist || msg.sender == owner, "!authorized");
         paused = false;
         _stakeCake();
     }
@@ -278,7 +242,7 @@ contract StackingV2 {
         string memory signature,
         bytes memory data
     ) public payable returns (bytes memory) {
-        require(msg.sender == governance, "!governance");
+        require(msg.sender == owner, "!owner");
 
         bytes memory callData;
 

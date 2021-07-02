@@ -1,5 +1,7 @@
 pragma solidity ^0.6.6;
 
+import "./VaultV0.sol";
+
 contract Game {
     //TODO add verification with this constant
     uint256 private constant ROLL_IN_PROGRESS = 42;
@@ -12,7 +14,8 @@ contract Game {
     //uint256 public houseEdge = 50; //edge percentage (10000 = 100%)
     //uint256 public divestFee = 50; //divest fee percentage (10000 = 100%)
     //uint256 public emergencyWithdrawalRatio = 90; //ratio percentage (100 = 100%)
-
+    VaultV0 vault;
+    address vaulAdress;
     uint256 constant pwin = 9000; //probability of winning (10000 = 100%)
     uint256 constant edge = 190; //edge percentage (10000 = 100%)
     uint256 constant maxWin = 100; //max win (before edge is taken) as percentage of bankroll (10000 = 100%)
@@ -51,9 +54,9 @@ contract Game {
 
     uint256 public invested = 0;
 
+    address controller;
     address owner;
-    address houseAddress;
-    bool public isStopped;
+    bool public paused;
 
     WithdrawalProposal public proposedWithdrawal;
 
@@ -83,9 +86,43 @@ contract Game {
     event DiceRolled(bytes32 indexed requestId, address indexed roller);
     event DiceLanded(bytes32 indexed requestId, uint256 indexed result);
 
-    constructor() public {
-        owner = msg.sender;
-        houseAddress = msg.sender;
+    /**
+        CONSTRUCTOR
+    */
+    constructor(address _controller, address _owner) public {
+        controller = _controller;
+        owner = _owner;
+
+        // vaulAdress = new VaultV0(controller, owner);
+        vault = new VaultV0(controller, owner);
+    }
+
+    constructor(
+        address _controller,
+        address _owner,
+        uint256 pwinInitial,
+        uint256 edgeInitial,
+        uint256 maxWinInitial,
+        uint256 minBetInitial,
+        uint256 maxInvestorsInitial,
+        uint256 houseEdgeInitial,
+        uint256 divestFeeInitial,
+        uint256 emergencyWithdrawalRatioInitial
+    ) public {
+        controller = _controller;
+        owner = _owner;
+
+        pwin = pwinInitial;
+        edge = edgeInitial;
+        maxWin = maxWinInitial;
+        minBet = minBetInitial;
+        maxInvestors = maxInvestorsInitial;
+        houseEdge = houseEdgeInitial;
+        divestFee = divestFeeInitial;
+        emergencyWithdrawalRatio = emergencyWithdrawalRatioInitial;
+
+        vaulAdress = new VaultV0(controller, owner);
+        vault = new VaultV0(controller, owner);
     }
 
     // function Dice(
@@ -109,8 +146,8 @@ contract Game {
     //   houseEdge = houseEdgeInitial;
     //   divestFee = divestFeeInitial;
     //   emergencyWithdrawalRatio = emergencyWithdrawalRatioInitial;
+    //   controller = msg.sender;
     //   owner = msg.sender;
-    //   houseAddress = msg.sender;
     // }
 
     //SECTION I: MODIFIERS AND HELPER FUNCTIONS
@@ -118,12 +155,12 @@ contract Game {
     //MODIFIERS
 
     modifier onlyIfNotStopped {
-        if (isStopped) require(false, "Contract is stopped");
+        if (paused) require(false, "Contract is stopped");
         _;
     }
 
     modifier onlyIfStopped {
-        if (!isStopped) require(false, "Contract is not stopped");
+        if (!paused) require(false, "Contract is not stopped");
         _;
     }
 
@@ -139,7 +176,10 @@ contract Game {
     }
 
     modifier onlyOwner {
-        if (owner != msg.sender) require(false, "Only for owner");
+        require(
+            msg.sender == controller || msg.sender == owner,
+            "Only for owner"
+        );
         _;
     }
 
@@ -385,14 +425,12 @@ contract Game {
         if (!success) {
             //if (!(addr.call.gas(safeGas).value(value)(""))) {
             FailedSend(addr, value);
-            if (addr != houseAddress) {
+            if (addr != owner) {
                 //Forward to house address all change
-                (bool success, ) = houseAddress.call.gas(safeGas).value(value)(
-                    ""
-                );
+                (bool success, ) = owner.call.gas(safeGas).value(value)("");
                 if (!success) {
-                    //if (!(houseAddress.call.gas(safeGas).value(value)()))
-                    FailedSend(houseAddress, value);
+                    //if (!(owner.call.gas(safeGas).value(value)()))
+                    FailedSend(owner, value);
                     //require(success, "Transfer to House failed.");
                 }
             }
@@ -526,27 +564,6 @@ contract Game {
         emit DiceLanded(requestId, d20Value);
     }
 
-    // function rollDice(
-    //     bytes32 myid,
-    //        string memory result,
-    //        bytes memory proof
-    //    )
-    //   public
-    //     // onlyOraclize
-    //   onlyIfNotProcessed(myid)
-    // onlyIfValidRoll(myid, result)
-    //   onlyIfBetSizeIsStillCorrect(myid)
-    //{
-    //   Bet memory thisBet = bets[myid];
-    //  //uint256 numberRolled = parseInt(result);
-    //    uint256 numberRolled = toUint256(stringToBytes32(result));
-    //   bets[myid].numberRolled = numberRolled;
-    //  isWinningBet(thisBet, numberRolled);
-    //    isLosingBet(thisBet, numberRolled);
-    //   amountWagered += thisBet.amountBetted;
-    //  delete profitDistributed;
-    //}
-
     function isWinningBet(Bet memory thisBet, uint256 numberRolled)
         private
         onlyWinningBets(numberRolled)
@@ -568,7 +585,7 @@ contract Game {
             10000;
         uint256 houseProfit = ((thisBet.amountBetted - 1) * (houseEdge)) /
             10000;
-        safeSend(houseAddress, houseProfit);
+        safeSend(owner, houseProfit);
     }
 
     //SECTION III: INVEST & DIVEST
@@ -584,24 +601,6 @@ contract Game {
         investors[investorIDs[msg.sender]].amountInvested += msg.value;
         invested += msg.value;
     }
-
-    // function newInvestor()
-    //payable
-    //   onlyIfNotStopped
-    //onlyMoreThanZero
-    // onlyNotInvestors
-    // onlyMoreThanMinInvestment
-    //{
-    // profitDistribution();
-
-    //if (numInvestors == maxInvestors) {
-    //  uint256 smallestInvestorID = searchSmallestInvestor();
-    //    divest(investors[smallestInvestorID].investorAddress);
-    //}
-
-    //  numInvestors++;
-    //addInvestorAtID(numInvestors);
-    //}
 
     function newInvestor()
         public
@@ -654,7 +653,7 @@ contract Game {
 
         numInvestors--;
         safeSend(currentInvestor, amountToReturn);
-        safeSend(houseAddress, divestFeeAmount);
+        safeSend(owner, divestFeeAmount);
     }
 
     function forceDivestOfAllInvestors() public payable onlyOwner rejectValue {
@@ -665,7 +664,7 @@ contract Game {
     }
 
     /*
-    The owner can use this function to force the exit of an investor from the
+    The controller can use this function to force the exit of an investor from the
     contract during an emergency withdrawal in the following situations:
         - Unresponsive investor
         - Investor demanding to be paid in other to vote, the facto-blackmailing
@@ -685,21 +684,21 @@ contract Game {
 
     //SECTION IV: CONTRACT MANAGEMENT
 
-    function stopContract() public payable onlyOwner rejectValue {
-        isStopped = true;
+    function pause() public payable onlyOwner rejectValue {
+        paused = true;
     }
 
-    function resumeContract() public payable onlyOwner rejectValue {
-        isStopped = false;
+    function unpause() public payable onlyOwner rejectValue {
+        paused = false;
     }
 
-    function changeHouseAddress(address newHouse)
+    function changeControllerAddress(address newController)
         public
         payable
         onlyOwner
         rejectValue
     {
-        houseAddress = newHouse;
+        controller = newController;
     }
 
     function changeOwnerAddress(address newOwner)
