@@ -25,17 +25,20 @@ contract StackingV2 {
     using SafeMath for uint256;
     using Math for uint256;
 
+    // TODO add it as constructor parameter to implement tests
     address public constant want =
         address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
     //   address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
     // testnet 0xF9f93cF501BFaDB6494589Cb4b4C15dE49E85D0e
 
     //TODO Use WBNB to store benefices
+    // TODO add it as constructor parameter to implement tests
     address public constant wbnb =
         address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     // address(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
     // testnet 0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F
 
+    // TODO add it as constructor parameter to implement tests
     address public constant cakeChef =
         address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 
