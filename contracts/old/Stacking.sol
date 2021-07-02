@@ -31,14 +31,14 @@ contract Stacking {
 
     // https://bsc.kiemtienonline360.com/
     // ******* TESTNET *******
-    // IERC20 public cake = IERC20(0x7ef95a0fee0dd31b22626fa2e10ee6a223f8a684); // USD
-    // CakeChef public cakeChef =
-    //     CakeChef(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3); //PancakeRouter
+    IERC20 public cake = IERC20(0xF9f93cF501BFaDB6494589Cb4b4C15dE49E85D0e); // Cake
+    CakeChef public cakeChef =
+        CakeChef(0x73feaa1eE314F8c655E354234017bE2193C9E24E); //prod
 
     // ******* MAINNET *******
-    IERC20 public cake = IERC20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
-    CakeChef public cakeChef =
-        CakeChef(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
+    // IERC20 public cake = IERC20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
+    // CakeChef public cakeChef =
+    //     CakeChef(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 
     // Info of each user.
     //TODO manage array of Stacks and array of Bet

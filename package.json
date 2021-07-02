@@ -13,7 +13,8 @@
     "migrate:dev": "npx truffle migrate --reset --network cldev",
     "migrate:kovan": "npx truffle migrate --network kovan",
     "migrate:bnb:test": "npx truffle migrate --network binance_testnet",
-    "test": "npx truffle test"
+    "test:truffle": "npx truffle test",
+    "test": "mocha --recursive './test/*.test.js'"
   },
   "license": "MIT",
   "dependencies": {
@@ -22,7 +23,8 @@
     "@truffle/hdwallet-provider": "^1.2.1",
     "@uniswap/lib": "1.1.1",
     "@uniswap/v2-core": "^1.0.1",
-    "dotenv": "^8.2.0"
+    "dotenv": "^8.2.0",
+    "truffle-hdwallet-provider": "^1.0.17"
   },
   "devDependencies": {
     "@chainlink/belt": "^0.0.3",
@@ -30,6 +32,8 @@
     "@openzeppelin/test-helpers": "^0.5.10",
     "chai": "^4.3.0",
     "depcheck": "^1.3.1",
+    "ganache-cli": "^6.12.2",
+    "mocha": "^9.0.1",
     "solhint": "^3.3.2",
     "truffle": "^5.3.1"
   },
