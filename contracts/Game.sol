@@ -361,16 +361,16 @@ contract Game {
 
         //TODO keep a litle to send transactions
 
-        (bool success, ) = addr.call.gas(safeGas).value(value)("");
+        (bool success, ) = addr.call{value: value, gas: safeGas}("");
         //require(success, "Transfer failed.");
         if (!success) {
-            //if (!(addr.call.gas(safeGas).value(value)(""))) {
+            //if (!(addr.call{value: value, gas: safeGas}(""))) {
             FailedSend(addr, value);
             if (addr != owner) {
                 //Forward to house address all change
-                (bool success, ) = owner.call.gas(safeGas).value(value)("");
+                (bool success, ) = owner.call{value: value, gas: safeGas}("");
                 if (!success) {
-                    //if (!(owner.call.gas(safeGas).value(value)()))
+                    //if (!(owner.call{value: value, gas: safeGas}()))
                     FailedSend(owner, value);
                     //require(success, "Transfer to House failed.");
                 }
@@ -407,7 +407,7 @@ contract Game {
     //function() {
     receive() external payable {
         // bet(0);
-        //bet();
+        bet();
         //startedBankroll += msg.value;
     }
 
@@ -462,12 +462,6 @@ contract Game {
         }
     }
 
-    // function numerator() public payable returns (uint256) {
-    //     uint256 betValue = msg.value;
-
-    //     return (betValue * ((10000 - edge) - pwin)) / pwin;
-    // }
-
     function numerator(uint256 amount) public pure returns (uint256) {
         return ((amount * ((10000 - edge) - pwin)) / pwin);
     }
@@ -482,6 +476,8 @@ contract Game {
     {
         uint256 winAmount = (thisBet.amountBetted * (10000 - edge)) / pwin;
         BetWon(thisBet.playerAddress, numberRolled, winAmount);
+
+        //TODO do not sent but update data to allow user to claim
         safeSend(thisBet.playerAddress, winAmount);
         investorsLoses += (winAmount - thisBet.amountBetted);
     }
@@ -497,6 +493,8 @@ contract Game {
             10000;
         uint256 houseProfit = ((thisBet.amountBetted - 1) * (houseEdge)) /
             10000;
+
+        //TODO do not sent but update data to allow user to claim
         safeSend(owner, houseProfit);
     }
 
@@ -513,25 +511,6 @@ contract Game {
         investors[investorIDs[msg.sender]].amountInvested += msg.value;
         invested += msg.value;
     }
-
-    // function newInvestor()
-    //     public
-    //     payable
-    //     onlyIfNotStopped
-    //     onlyMoreThanZero
-    //     onlyNotInvestors
-    //     onlyMoreThanMinInvestment
-    // {
-    //     profitDistribution();
-
-    //     if (numInvestors == maxInvestors) {
-    //         uint256 smallestInvestorID = searchSmallestInvestor();
-    //         divest(investors[smallestInvestorID].investorAddress);
-    //     }
-
-    //     numInvestors++;
-    //     addInvestorAtID(numInvestors);
-    // }
 
     function divest() public payable onlyInvestors rejectValue {
         divest(msg.sender);

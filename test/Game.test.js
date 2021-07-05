@@ -194,5 +194,7 @@ contract(
         assert(error)
       }
     })
+
+    //TODO getMinInvestment check update
   }
 )
