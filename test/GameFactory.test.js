@@ -12,20 +12,21 @@ contract("GameFactory", ([alice, bob, carol, dev, minter]) => {
 
     await gameFactory.createGame()
 
-    let deployedGamesAddresses = await gameFactory.getDeployedGamesAdresses()
+    const [game1Address] = await gameFactory.getDeployedGamesAdresses()
 
-    // wait until the transaction is mined
-    // await deployedGamesAddresses.wait()
-    console.log(
-      "🚀 ~ file: GameFactory.test.js ~ line 16 ~ beforeEach ~ deployedGamesAddresses",
-      deployedGamesAddresses
+    console.log("🚀 game1Address", game1Address)
+
+    // const deployedGames = await gameFactory.getDeployedGames()
+
+    // console.log("🚀 deployedGames", deployedGames)
+
+    const game1 = await (await ethers.getContractFactory("Game")).attach(
+      game1Address
     )
-
-    // this.game1 = await GameFactory.createGame({ from: minter })
-    // console.log(
-    //   "🚀 ~ file: GameFactory.test.js ~ line 11 ~ beforeEach ~ this.game1",
-    //   this.game1
-    // )
+    console.log(
+      "🚀 ~ file: GameFactory.test.js ~ line 26 ~ beforeEach ~ game1",
+      game1
+    )
   })
 
   it("initializing game from factory", async () => {})

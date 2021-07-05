@@ -1,6 +1,7 @@
 pragma solidity ^0.6.12;
 
 // import "./VaultV0.sol";
+import "./Random.sol";
 
 contract Game {
     //TODO add verification with this constant
@@ -12,14 +13,13 @@ contract Game {
     uint256 constant pwin = 9000; //probability of winning (10000 = 100%)
     uint256 constant edge = 190; //edge percentage (10000 = 100%)
     uint256 constant maxWin = 100; //max win (before edge is taken) as percentage of bankroll (10000 = 100%)
-    uint256 constant minBet = 20 finney;
+    uint256 constant minBet = 100000000000000000 wei; // 0,1 BNB - https://eth-converter.com/
     uint256 constant maxInvestors = 10; //maximum number of investors
     uint256 constant houseEdge = 90; //edge percentage (10000 = 100%)
     uint256 constant divestFee = 50; //divest fee percentage (10000 = 100%)
     uint256 constant emergencyWithdrawalRatio = 10; //ratio percentage (100 = 100%)
 
     uint256 safeGas = 25000;
-    uint256 constant ORACLIZE_GAS_LIMIT = 125000;
     uint256 constant INVALID_BET_MARKER = 99999;
     uint256 constant EMERGENCY_TIMEOUT = 7 days;
 
@@ -90,59 +90,6 @@ contract Game {
         // vaulAdress = new VaultV0(controller, owner);
         // vault = new VaultV0(controller, owner);
     }
-
-    // constructor(
-    //     address _controller,
-    //     address _owner,
-    //     uint256 pwinInitial,
-    //     uint256 edgeInitial,
-    //     uint256 maxWinInitial,
-    //     uint256 minBetInitial,
-    //     uint256 maxInvestorsInitial,
-    //     uint256 houseEdgeInitial,
-    //     uint256 divestFeeInitial,
-    //     uint256 emergencyWithdrawalRatioInitial
-    // ) public {
-    //     controller = _controller;
-    //     owner = _owner;
-
-    //     pwin = pwinInitial;
-    //     edge = edgeInitial;
-    //     maxWin = maxWinInitial;
-    //     minBet = minBetInitial;
-    //     maxInvestors = maxInvestorsInitial;
-    //     houseEdge = houseEdgeInitial;
-    //     divestFee = divestFeeInitial;
-    //     emergencyWithdrawalRatio = emergencyWithdrawalRatioInitial;
-
-    //     vaulAdress = new VaultV0(controller, owner);
-    //     vault = new VaultV0(controller, owner);
-    // }
-
-    // function Dice(
-    //   uint256 pwinInitial,
-    //   uint256 edgeInitial,
-    //   uint256 maxWinInitial,
-    //   uint256 minBetInitial,
-    //   uint256 maxInvestorsInitial,
-    //   uint256 houseEdgeInitial,
-    //   uint256 divestFeeInitial,
-    //   uint256 emergencyWithdrawalRatioInitial
-    // ) {
-    //   // OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
-    //   // oraclize_setProof(proofType_TLSNotary | proofStorage_IPFS);
-
-    //   pwin = pwinInitial;
-    //   edge = edgeInitial;
-    //   maxWin = maxWinInitial;
-    //   minBet = minBetInitial;
-    //   maxInvestors = maxInvestorsInitial;
-    //   houseEdge = houseEdgeInitial;
-    //   divestFee = divestFeeInitial;
-    //   emergencyWithdrawalRatio = emergencyWithdrawalRatioInitial;
-    //   controller = msg.sender;
-    //   owner = msg.sender;
-    // }
 
     //SECTION I: MODIFIERS AND HELPER FUNCTIONS
 
@@ -456,14 +403,6 @@ contract Game {
         profitDistributed = true;
     }
 
-    //function random() private view returns (uint) {
-    //  return uint(keccak256(block.difficulty, now));
-    //}
-
-    //function random() private view returns (uint8) {
-    //  return uint8(uint256(keccak256(block.timestamp, block.difficulty))%251);
-    //}
-
     // SECTION II: BET & BET PROCESSING
     //function() {
     receive() external payable {
@@ -471,7 +410,6 @@ contract Game {
         bet();
     }
 
-    // function bet(uint256 userProvidedSeed)
     function bet()
         public
         payable
@@ -479,46 +417,24 @@ contract Game {
         onlyMoreThanZero
         onlyMoreThanMinInvestment
     {
-        //require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK to pay fee");
-
-        //TODO update this line by converting LINK fees to ETH fees
-        uint256 oraclizeFee = 2 finney;
-
-        //uint256 betValue = msg.value - oraclizeFee;
         uint256 betValue = msg.value;
 
         if (
             (((betValue * ((10000 - edge) - pwin)) / pwin) <=
                 (maxWin * getBankroll()) / 10000)
         ) {
-            //require(false, 'PROUT');
-
-            //bytes32 myid = "getrandom number";
-            // bytes32 myid = investorIDs[msg.sender];
-
-            //TODO Add this line require(s_results[roller] == 0, "Already rolled");
-
-            // bytes32 myid = requestRandomness(
-            //     s_keyHash,
-            //     s_fee,
-            //     userProvidedSeed
-            // );
-            // bytes32 myid = requestRandomness(s_keyHash, s_fee);
-            bytes32 myid = "Hello";
-
-            //TODO : Call __callback method after generating random number
-
-            // encrypted arg: '\n{"jsonrpc":2.0,"method":"generateSignedIntegers","params":{"apiKey":"YOUR_API_KEY","n":1,"min":1,"max":10000},"id":1}'
-            // oraclize_query(
-            //   "URL",
-            // "json(https://api.random.org/json-rpc/1/invoke).result.random.data.0",
-            //"BBX1PCQ9134839wTz10OWxXCaZaGk92yF6TES8xA+8IC7xNBlJq5AL0uW3rev7IoApA5DMFmCfKGikjnNbNglKKvwjENYPB8TBJN9tDgdcYNxdWnsYARKMqmjrJKYbBAiws+UU6HrJXUWirO+dBSSJbmjIg+9vmBjSq8KveiBzSGmuQhu7/hSg5rSsSP/r+MhR/Q5ECrOHi+CkP/qdSUTA/QhCCjdzFu+7t3Hs7NU34a+l7JdvDlvD8hoNxyKooMDYNbUA8/eFmPv2d538FN6KJQp+RKr4w4VtAMHdejrLM=",
-            //ORACLIZE_GAS_LIMIT + safeGas
-            //);
+            bytes32 myid = randbytes(10, msg.sender);
 
             bets[myid] = Bet(msg.sender, betValue, 0);
             betsKeys.push(myid);
+
             emit DiceRolled(myid, msg.sender);
+
+            uint256 numberRolled = randrange(1, 10000);
+            bets[myid].numberRolled = numberRolled;
+            isWinningBet(bets[myid], numberRolled);
+            isLosingBet(bets[myid], numberRolled);
+            delete profitDistributed;
         } else {
             require(false, "Transaction must more than one Ether");
         }
