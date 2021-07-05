@@ -1,102 +1,79 @@
-const assert = require("assert")
-const ganache = require("ganache-cli")
-const Web3 = require("web3")
-const web3 = new Web3(ganache.provider())
+const { expectRevert, time } = require("@openzeppelin/test-helpers")
+const CakeToken = artifacts.require("CakeToken")
+const SyrupBar = artifacts.require("SyrupBar")
+const MasterChef = artifacts.require("MasterChef")
+const GameFactory = artifacts.require("GameFactory")
 
-// const compiledFactory = require("../build/CampaignFactory.json")
-// const compiledCampaign = require("../build/Campaign.json");
+contract("GameFactory", ([alice, bob, carol, dev, minter]) => {
+  beforeEach(async () => {
+    const GameFactory = await ethers.getContractFactory("GameFactory")
+    const gameFactory = await GameFactory.deploy()
+    await gameFactory.deployed()
 
-let accounts
-let factory
-let campaignAddress
-let campaign
+    await gameFactory.createGame()
 
-beforeEach(async () => {
-  accounts = await web3.eth.getAccounts()
+    let deployedGamesAddresses = await gameFactory.getDeployedGamesAdresses()
 
-  factory = await new web3.eth.Contract(JSON.parse(compiledFactory.interface))
-    .deploy({ data: compiledFactory.bytecode })
-    .send({ from: accounts[0], gas: "1000000" })
+    // wait until the transaction is mined
+    // await deployedGamesAddresses.wait()
+    console.log(
+      "🚀 ~ file: GameFactory.test.js ~ line 16 ~ beforeEach ~ deployedGamesAddresses",
+      deployedGamesAddresses
+    )
 
-  await factory.methods.createCampaign("100").send({
-    from: accounts[0],
-    gas: "1000000"
-  })
-  ;[campaignAddress] = await factory.methods.getDeployedCampaigns().call()
-  campaign = await new web3.eth.Contract(
-    JSON.parse(compiledCampaign.interface),
-    campaignAddress
-  )
-})
-
-describe("Campaigns", () => {
-  it("deploys a factory and a campaign", () => {
-    assert.ok(factory.options.address)
-    assert.ok(campaign.options.address)
+    // this.game1 = await GameFactory.createGame({ from: minter })
+    // console.log(
+    //   "🚀 ~ file: GameFactory.test.js ~ line 11 ~ beforeEach ~ this.game1",
+    //   this.game1
+    // )
   })
 
-  it("marks caller as the campaign manager", async () => {
-    const manager = await campaign.methods.manager().call()
-    assert.equal(accounts[0], manager)
-  })
+  it("initializing game from factory", async () => {})
 
-  it("allows people to contribute money and marks them as approvers", async () => {
-    await campaign.methods.contribute().send({
-      value: "200",
-      from: accounts[1]
-    })
-    const isContributor = await campaign.methods.approvers(accounts[1]).call()
-    assert(isContributor)
-  })
+  // it("deposit/withdraw", async () => {
+  //   await this.chef.add("1000", this.lp1.address, true, { from: minter })
+  //   await this.chef.add("1000", this.lp2.address, true, { from: minter })
+  //   await this.chef.add("1000", this.lp3.address, true, { from: minter })
 
-  it("requires a minimum contribution", async () => {
-    try {
-      await campaign.methods.contribute().send({
-        value: "5",
-        from: accounts[1]
-      })
-      assert(false)
-    } catch (err) {
-      assert(err)
-    }
-  })
+  //   await this.lp1.approve(this.chef.address, "100", { from: alice })
+  //   await this.chef.deposit(1, "20", { from: alice })
+  //   await this.chef.deposit(1, "0", { from: alice })
+  //   await this.chef.deposit(1, "40", { from: alice })
+  //   await this.chef.deposit(1, "0", { from: alice })
+  //   assert.equal((await this.lp1.balanceOf(alice)).toString(), "1940")
+  //   await this.chef.withdraw(1, "10", { from: alice })
+  //   assert.equal((await this.lp1.balanceOf(alice)).toString(), "1950")
+  //   assert.equal((await this.cake.balanceOf(alice)).toString(), "999")
+  //   assert.equal((await this.cake.balanceOf(dev)).toString(), "100")
 
-  it("allows a manager to make a payment request", async () => {
-    await campaign.methods
-      .createRequest("Buy batteries", "100", accounts[1])
-      .send({
-        from: accounts[0],
-        gas: "1000000"
-      })
-    const request = await campaign.methods.requests(0).call()
+  //   await this.lp1.approve(this.chef.address, "100", { from: bob })
+  //   assert.equal((await this.lp1.balanceOf(bob)).toString(), "2000")
+  //   await this.chef.deposit(1, "50", { from: bob })
+  //   assert.equal((await this.lp1.balanceOf(bob)).toString(), "1950")
+  //   await this.chef.deposit(1, "0", { from: bob })
+  //   assert.equal((await this.cake.balanceOf(bob)).toString(), "125")
+  //   await this.chef.emergencyWithdraw(1, { from: bob })
+  //   assert.equal((await this.lp1.balanceOf(bob)).toString(), "2000")
+  // })
 
-    assert.equal("Buy batteries", request.description)
-  })
+  // it("staking/unstaking", async () => {
+  //   await this.chef.add("1000", this.lp1.address, true, { from: minter })
+  //   await this.chef.add("1000", this.lp2.address, true, { from: minter })
+  //   await this.chef.add("1000", this.lp3.address, true, { from: minter })
 
-  it("processes requests", async () => {
-    await campaign.methods.contribute().send({
-      from: accounts[0],
-      value: web3.utils.toWei("10", "ether")
-    })
+  //   await this.lp1.approve(this.chef.address, "10", { from: alice })
+  //   await this.chef.deposit(1, "2", { from: alice }) //0
+  //   await this.chef.withdraw(1, "2", { from: alice }) //1
 
-    await campaign.methods
-      .createRequest("A", web3.utils.toWei("5", "ether"), accounts[1])
-      .send({ from: accounts[0], gas: "1000000" })
-
-    await campaign.methods.approveRequest(0).send({
-      from: accounts[0],
-      gas: "1000000"
-    })
-
-    await campaign.methods.finalizeRequest(0).send({
-      from: accounts[0],
-      gas: "1000000"
-    })
-
-    let balance = await web3.eth.getBalance(accounts[1])
-    balance = web3.utils.fromWei(balance, "ether")
-    balance = parseFloat(balance)
-    console.log(balance)
-    assert(balance > 104)
-  })
+  //   await this.cake.approve(this.chef.address, "250", { from: alice })
+  //   await this.chef.enterStaking("240", { from: alice }) //3
+  //   assert.equal((await this.syrup.balanceOf(alice)).toString(), "240")
+  //   assert.equal((await this.cake.balanceOf(alice)).toString(), "10")
+  //   await this.chef.enterStaking("10", { from: alice }) //4
+  //   assert.equal((await this.syrup.balanceOf(alice)).toString(), "250")
+  //   assert.equal((await this.cake.balanceOf(alice)).toString(), "249")
+  //   await this.chef.leaveStaking(250)
+  //   assert.equal((await this.syrup.balanceOf(alice)).toString(), "0")
+  //   assert.equal((await this.cake.balanceOf(alice)).toString(), "749")
+  // })
 })

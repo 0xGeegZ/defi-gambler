@@ -1,4 +1,4 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.6.12;
 
 //Use this for visual sutdio code IDE
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -6,9 +6,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
-//TODO add https://docs.openzeppelin.com/contracts/2.x/api/lifecycle#pausable
-// import "@openzeppelin/contkracts/security/Pausable.sol";
 
 import "./interfaces/ICakeChef.sol";
 
@@ -48,10 +45,17 @@ contract VaultV0 {
 
     bool public paused;
 
+    // constructor(
+    //         address _controller,
+    //         address _owner
+    // address _want
+    // ) public {
+
     constructor(address _controller, address _owner) public {
         //TODO remove one of the three adresse
         owner = _owner;
         controller = _controller;
+        // want = _want;
         strategist = msg.sender;
     }
 

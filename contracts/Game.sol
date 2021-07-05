@@ -1,21 +1,14 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.6.12;
 
-import "./VaultV0.sol";
+// import "./VaultV0.sol";
 
 contract Game {
     //TODO add verification with this constant
     uint256 private constant ROLL_IN_PROGRESS = 42;
 
-    //uint256 public pwin = 5000; //probability of winning (10000 = 100%)
-    //uint256 public edge = 200; //edge percentage (10000 = 100%)
-    //uint256 public maxWin = 100; //max win (before edge is taken) as percentage of bankroll (10000 = 100%)
-    //uint256 public minBet = 10 finney; //https://www.cryps.info/en/Finney_to_ETH/1/ - https://eth-converter.com/
-    //uint256 public maxInvestors = 5; //maximum number of investors
-    //uint256 public houseEdge = 50; //edge percentage (10000 = 100%)
-    //uint256 public divestFee = 50; //divest fee percentage (10000 = 100%)
-    //uint256 public emergencyWithdrawalRatio = 90; //ratio percentage (100 = 100%)
-    VaultV0 vault;
-    address vaulAdress;
+    // VaultV0 vault;
+    // address vaulAdress;
+
     uint256 constant pwin = 9000; //probability of winning (10000 = 100%)
     uint256 constant edge = 190; //edge percentage (10000 = 100%)
     uint256 constant maxWin = 100; //max win (before edge is taken) as percentage of bankroll (10000 = 100%)
@@ -89,41 +82,42 @@ contract Game {
     /**
         CONSTRUCTOR
     */
-    constructor(address _controller, address _owner) public {
-        controller = _controller;
+    // constructor(address _controller, address _owner) public {
+    constructor(address _owner) public {
+        // controller = _controller;
         owner = _owner;
 
         // vaulAdress = new VaultV0(controller, owner);
-        vault = new VaultV0(controller, owner);
+        // vault = new VaultV0(controller, owner);
     }
 
-    constructor(
-        address _controller,
-        address _owner,
-        uint256 pwinInitial,
-        uint256 edgeInitial,
-        uint256 maxWinInitial,
-        uint256 minBetInitial,
-        uint256 maxInvestorsInitial,
-        uint256 houseEdgeInitial,
-        uint256 divestFeeInitial,
-        uint256 emergencyWithdrawalRatioInitial
-    ) public {
-        controller = _controller;
-        owner = _owner;
+    // constructor(
+    //     address _controller,
+    //     address _owner,
+    //     uint256 pwinInitial,
+    //     uint256 edgeInitial,
+    //     uint256 maxWinInitial,
+    //     uint256 minBetInitial,
+    //     uint256 maxInvestorsInitial,
+    //     uint256 houseEdgeInitial,
+    //     uint256 divestFeeInitial,
+    //     uint256 emergencyWithdrawalRatioInitial
+    // ) public {
+    //     controller = _controller;
+    //     owner = _owner;
 
-        pwin = pwinInitial;
-        edge = edgeInitial;
-        maxWin = maxWinInitial;
-        minBet = minBetInitial;
-        maxInvestors = maxInvestorsInitial;
-        houseEdge = houseEdgeInitial;
-        divestFee = divestFeeInitial;
-        emergencyWithdrawalRatio = emergencyWithdrawalRatioInitial;
+    //     pwin = pwinInitial;
+    //     edge = edgeInitial;
+    //     maxWin = maxWinInitial;
+    //     minBet = minBetInitial;
+    //     maxInvestors = maxInvestorsInitial;
+    //     houseEdge = houseEdgeInitial;
+    //     divestFee = divestFeeInitial;
+    //     emergencyWithdrawalRatio = emergencyWithdrawalRatioInitial;
 
-        vaulAdress = new VaultV0(controller, owner);
-        vault = new VaultV0(controller, owner);
-    }
+    //     vaulAdress = new VaultV0(controller, owner);
+    //     vault = new VaultV0(controller, owner);
+    // }
 
     // function Dice(
     //   uint256 pwinInitial,
@@ -509,7 +503,8 @@ contract Game {
             //     s_fee,
             //     userProvidedSeed
             // );
-            bytes32 myid = requestRandomness(s_keyHash, s_fee);
+            // bytes32 myid = requestRandomness(s_keyHash, s_fee);
+            bytes32 myid = "Hello";
 
             //TODO : Call __callback method after generating random number
 
@@ -527,41 +522,6 @@ contract Game {
         } else {
             require(false, "Transaction must more than one Ether");
         }
-    }
-
-    /**
-     * @notice Callback function used by VRF Coordinator to return the random number
-     * to this contract.
-     * @dev Some action on the contract state should be taken here, like storing the result.
-     * @dev WARNING: take care to avoid having multiple VRF requests in flight if their order of arrival would result
-     * in contract states with different outcomes. Otherwise miners or the VRF operator would could take advantage
-     * by controlling the order.
-     * @dev The VRF Coordinator will only send this function verified responses, and the parent VRFConsumerBase
-     * contract ensures that this method only receives randomness from the designated VRFCoordinator.
-     *
-     * @param requestId bytes32
-     * @param randomness The random result returned by the oracle
-     */
-    function fulfillRandomness(bytes32 requestId, uint256 randomness)
-        internal
-        override
-        onlyIfNotProcessed(requestId)
-        onlyIfValidRoll(requestId, randomness)
-        onlyIfBetSizeIsStillCorrect(requestId)
-    {
-        uint256 d20Value = randomness.mod(20).add(1);
-
-        Bet memory thisBet = bets[requestId];
-        //uint256 numberRolled = parseInt(result);
-
-        bets[requestId].numberRolled = d20Value;
-        isWinningBet(thisBet, d20Value);
-        isLosingBet(thisBet, d20Value);
-        amountWagered += thisBet.amountBetted;
-        delete profitDistributed;
-
-        //s_results[s_rollers[requestId]] = d20Value;
-        emit DiceLanded(requestId, d20Value);
     }
 
     function isWinningBet(Bet memory thisBet, uint256 numberRolled)
