@@ -1,88 +1,198 @@
-// const { expectRevert, time } = require("@openzeppelin/test-helpers")
-// const CakeToken = artifacts.require("CakeToken")
-// const SyrupBar = artifacts.require("SyrupBar")
+const { expectRevert, time, balance } = require("@openzeppelin/test-helpers")
+const { BigNumber } = require("@ethersproject/bignumber")
+
+const { assert } = require("chai")
+const CakeToken = artifacts.require("CakeToken")
+const SyrupBar = artifacts.require("SyrupBar")
 // const MasterChef = artifacts.require("MasterChef")
-// const MockBEP20 = artifacts.require("libs/MockBEP20")
+const Game = artifacts.require("Game")
 
-// contract("Game", ([alice, bob, carol, dev, minter]) => {
-//   beforeEach(async () => {
-//     this.cake = await CakeToken.new({ from: minter })
-//     this.syrup = await SyrupBar.new(this.cake.address, { from: minter })
-//     this.lp1 = await MockBEP20.new("LPToken", "LP1", "1000000", {
-//       from: minter
-//     })
-//     this.lp2 = await MockBEP20.new("LPToken", "LP2", "1000000", {
-//       from: minter
-//     })
-//     this.lp3 = await MockBEP20.new("LPToken", "LP3", "1000000", {
-//       from: minter
-//     })
-//     this.chef = await MasterChef.new(
-//       this.cake.address,
-//       this.syrup.address,
-//       dev,
-//       "1000",
-//       "100",
-//       { from: minter }
-//     )
-//     await this.cake.transferOwnership(this.chef.address, { from: minter })
-//     await this.syrup.transferOwnership(this.chef.address, { from: minter })
+contract(
+  "Game",
+  ([
+    alice,
+    bob,
+    carol,
+    jean,
+    peter,
+    wiliam,
+    julie,
+    maurice,
+    francis,
+    elena,
+    miranda,
+    dev,
+    minter
+  ]) => {
+    beforeEach(async () => {
+      this.game = await Game.new(ethers.utils.parseEther("1"), { from: minter })
+    })
 
-//     await this.lp1.transfer(bob, "2000", { from: minter })
-//     await this.lp2.transfer(bob, "2000", { from: minter })
-//     await this.lp3.transfer(bob, "2000", { from: minter })
+    it("Tests", async () => {
+      try {
+        // await this.game.bet({ from: minter })
+        // await this.game.bet({ from: alice })
+        // await this.game.newInvestor({
+        //   from: alice,
+        //   value: ethers.utils.parseEther("0.5")
+        // })
+        // const numerator =
+        // const numeratorTx = await this.game.numerator({
+        //   from: alice,
+        //   value: ethers.utils.parseEther("0.3")
+        // })
+        // const numerator = await numeratorTx.wait()
+        // const numerator = await this.game.numerator({
+        //   value: ethers.utils.parseEther("0.3")
+        // })
+        // const numerator = await this.game.numerator(
+        //   ethers.utils.parseEther("0.1")
+        // )
+        // const denominator = await this.game.denominator()
+        // console.log("===============================")
+        // console.log(`${numerator} <= ${denominator}`)
+        // console.log(numerator <= denominator)
+        // console.log("===============================")
+        // assert(numerator <= denominator)
+        // alice, bob, carol, jean, peter, wiliam, julie, maurice, francis, elena, miranda
+        // const balanceBefore = await this.game.getBalance(alice)
+        // const balanceInitial = await balance.current(alice)
+        // console.log(
+        //   `Alice Initial Balance : ${ethers.utils.formatEther(
+        //     balanceInitial.toString()
+        //   )}`
+        // )
+        // const payable = { value: ethers.utils.parseEther("0.1") }
+        // await this.game.bet({
+        //   from: alice,
+        //   ...payable
+        // })
+        // const balanceAfter = await this.game.getBalance(alice)
+        // console.log(`${ethers.utils.formatEther(balanceAfter.toString())}`)
+        // assert.equal(ethers.utils.formatEther(balanceAfter.toString()), "0.091")
+        // await this.game.bet({
+        //   from: alice,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: bob,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: carol,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: jean,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: peter,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: wiliam,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: julie,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: maurice,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: francis,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: elena,
+        //   ...payable
+        // })
+        // await this.game.bet({
+        //   from: miranda,
+        //   ...payable
+        // })
+      } catch (error) {
+        console.log("🚀 ~ file: Game.test.js ~ line 26 ~ it ~ error", error)
+        assert(!error)
+      }
+    })
 
-//     await this.lp1.transfer(alice, "2000", { from: minter })
-//     await this.lp2.transfer(alice, "2000", { from: minter })
-//     await this.lp3.transfer(alice, "2000", { from: minter })
-//   })
+    it("should enter", async () => {
+      const payable = { value: ethers.utils.parseEther("0.1") }
+      await this.game.bet({
+        from: alice,
+        ...payable
+      })
 
-//   it("initializing game from factory", async () => {})
+      const balanceAlice = await balance.current(alice)
+      // console.log(
+      //   `Alice Balance : ${ethers.utils.formatEther(
+      //     balanceAlice.toString()
+      //   )}`
+      // )
 
-//   // it("deposit/withdraw", async () => {
-//   //   await this.chef.add("1000", this.lp1.address, true, { from: minter })
-//   //   await this.chef.add("1000", this.lp2.address, true, { from: minter })
-//   //   await this.chef.add("1000", this.lp3.address, true, { from: minter })
+      const balanceAliceContract = await this.game.getBalance(alice)
+      // console.log(`${ethers.utils.formatEther(balanceAliceContract.toString())}`)
 
-//   //   await this.lp1.approve(this.chef.address, "100", { from: alice })
-//   //   await this.chef.deposit(1, "20", { from: alice })
-//   //   await this.chef.deposit(1, "0", { from: alice })
-//   //   await this.chef.deposit(1, "40", { from: alice })
-//   //   await this.chef.deposit(1, "0", { from: alice })
-//   //   assert.equal((await this.lp1.balanceOf(alice)).toString(), "1940")
-//   //   await this.chef.withdraw(1, "10", { from: alice })
-//   //   assert.equal((await this.lp1.balanceOf(alice)).toString(), "1950")
-//   //   assert.equal((await this.cake.balanceOf(alice)).toString(), "999")
-//   //   assert.equal((await this.cake.balanceOf(dev)).toString(), "100")
+      assert.equal(
+        ethers.utils.formatEther(balanceAliceContract.toString()),
+        "0.091"
+      )
+      assert.isBelow(
+        parseFloat(ethers.utils.formatEther(balanceAlice.toString())),
+        9999.9
+      )
+    })
 
-//   //   await this.lp1.approve(this.chef.address, "100", { from: bob })
-//   //   assert.equal((await this.lp1.balanceOf(bob)).toString(), "2000")
-//   //   await this.chef.deposit(1, "50", { from: bob })
-//   //   assert.equal((await this.lp1.balanceOf(bob)).toString(), "1950")
-//   //   await this.chef.deposit(1, "0", { from: bob })
-//   //   assert.equal((await this.cake.balanceOf(bob)).toString(), "125")
-//   //   await this.chef.emergencyWithdraw(1, { from: bob })
-//   //   assert.equal((await this.lp1.balanceOf(bob)).toString(), "2000")
-//   // })
+    it("should enter and increase investment", async () => {
+      const payable = { value: ethers.utils.parseEther("0.1") }
+      await this.game.bet({
+        from: alice,
+        ...payable
+      })
+      await this.game.increaseInvestment({
+        from: alice,
+        ...payable
+      })
 
-//   // it("staking/unstaking", async () => {
-//   //   await this.chef.add("1000", this.lp1.address, true, { from: minter })
-//   //   await this.chef.add("1000", this.lp2.address, true, { from: minter })
-//   //   await this.chef.add("1000", this.lp3.address, true, { from: minter })
+      const balanceAlice = await balance.current(alice)
+      // console.log(
+      //   `Alice Balance : ${ethers.utils.formatEther(balanceAlice.toString())}`
+      // )
 
-//   //   await this.lp1.approve(this.chef.address, "10", { from: alice })
-//   //   await this.chef.deposit(1, "2", { from: alice }) //0
-//   //   await this.chef.withdraw(1, "2", { from: alice }) //1
+      const balanceAliceContract = await this.game.getBalance(alice)
+      // console.log(
+      //   `${ethers.utils.formatEther(balanceAliceContract.toString())}`
+      // )
 
-//   //   await this.cake.approve(this.chef.address, "250", { from: alice })
-//   //   await this.chef.enterStaking("240", { from: alice }) //3
-//   //   assert.equal((await this.syrup.balanceOf(alice)).toString(), "240")
-//   //   assert.equal((await this.cake.balanceOf(alice)).toString(), "10")
-//   //   await this.chef.enterStaking("10", { from: alice }) //4
-//   //   assert.equal((await this.syrup.balanceOf(alice)).toString(), "250")
-//   //   assert.equal((await this.cake.balanceOf(alice)).toString(), "249")
-//   //   await this.chef.leaveStaking(250)
-//   //   assert.equal((await this.syrup.balanceOf(alice)).toString(), "0")
-//   //   assert.equal((await this.cake.balanceOf(alice)).toString(), "749")
-//   // })
-// })
+      assert.equal(
+        ethers.utils.formatEther(balanceAliceContract.toString()),
+        "0.191"
+      )
+      assert.isBelow(
+        parseFloat(ethers.utils.formatEther(balanceAlice.toString())),
+        9999.8
+      )
+    })
+
+    it("should not enter multiple times", async () => {
+      try {
+        const payable = { value: ethers.utils.parseEther("0.1") }
+        await this.game.bet({
+          from: alice,
+          ...payable
+        })
+        await this.game.bet({
+          from: alice,
+          ...payable
+        })
+        assert(false)
+      } catch (error) {
+        assert(error)
+      }
+    })
+  }
+)

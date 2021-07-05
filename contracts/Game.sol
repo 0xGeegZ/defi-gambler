@@ -1,14 +1,8 @@
 pragma solidity ^0.6.12;
 
-// import "./VaultV0.sol";
-import "./Random.sol";
-
 contract Game {
     //TODO add verification with this constant
     uint256 private constant ROLL_IN_PROGRESS = 42;
-
-    // VaultV0 vault;
-    // address vaulAdress;
 
     uint256 constant pwin = 9000; //probability of winning (10000 = 100%)
     uint256 constant edge = 190; //edge percentage (10000 = 100%)
@@ -46,6 +40,7 @@ contract Game {
     uint256 public numInvestors = 0;
 
     uint256 public invested = 0;
+    uint256 public startedBankroll = 500000000000000000 wei;
 
     address controller;
     address owner;
@@ -53,8 +48,10 @@ contract Game {
 
     WithdrawalProposal public proposedWithdrawal;
 
-    mapping(bytes32 => Bet) bets;
-    bytes32[] betsKeys;
+    // mapping(bytes32 => Bet) bets;
+    // bytes32[] betsKeys;
+    mapping(uint256 => Bet) bets;
+    uint256[] betsKeys;
 
     uint256 public amountWagered = 0;
     uint256 public investorsProfit = 0;
@@ -76,19 +73,17 @@ contract Game {
     event FailedSend(address receiver, uint256 amount);
     event ValueIsTooBig();
 
-    event DiceRolled(bytes32 indexed requestId, address indexed roller);
-    event DiceLanded(bytes32 indexed requestId, uint256 indexed result);
+    event DiceRolled(uint256 indexed requestId, address indexed roller);
+    event DiceLanded(uint256 indexed requestId, uint256 indexed result);
 
     /**
         CONSTRUCTOR
     */
     // constructor(address _controller, address _owner) public {
-    constructor(address _owner) public {
-        // controller = _controller;
-        owner = _owner;
-
-        // vaulAdress = new VaultV0(controller, owner);
-        // vault = new VaultV0(controller, owner);
+    // constructor(address _owner) public {
+    constructor(uint256 _startedBankroll) public {
+        owner = msg.sender;
+        startedBankroll = _startedBankroll;
     }
 
     //SECTION I: MODIFIERS AND HELPER FUNCTIONS
@@ -135,7 +130,7 @@ contract Game {
         _;
     }
 
-    modifier onlyIfBetSizeIsStillCorrect(bytes32 myid) {
+    modifier onlyIfBetSizeIsStillCorrect(uint256 myid) {
         Bet memory thisBet = bets[myid];
         if (
             (((thisBet.amountBetted * ((10000 - edge) - pwin)) / pwin) <=
@@ -149,7 +144,7 @@ contract Game {
         }
     }
 
-    modifier onlyIfValidRoll(bytes32 myid, uint256 result) {
+    modifier onlyIfValidRoll(uint256 myid, uint256 result) {
         Bet memory thisBet = bets[myid];
         //uint256 numberRolled = parseInt(result);
         uint256 numberRolled = result;
@@ -209,7 +204,7 @@ contract Game {
         _;
     }
 
-    modifier onlyIfNotProcessed(bytes32 myid) {
+    modifier onlyIfNotProcessed(uint256 myid) {
         Bet memory thisBet = bets[myid];
         if (thisBet.numberRolled > 0) require(false, "Already processed");
         _;
@@ -224,7 +219,7 @@ contract Game {
     //CONSTANT HELPER FUNCTIONS
 
     function getBankroll() public view returns (uint256) {
-        return invested + investorsProfit - investorsLoses;
+        return startedBankroll + invested + investorsProfit - investorsLoses;
     }
 
     function getMinInvestment() public view returns (uint256) {
@@ -278,7 +273,7 @@ contract Game {
         )
     {
         if (id < betsKeys.length) {
-            bytes32 betKey = betsKeys[id];
+            uint256 betKey = betsKeys[id];
             return (
                 bets[betKey].playerAddress,
                 bets[betKey].amountBetted,
@@ -330,7 +325,12 @@ contract Game {
                 (investorsProfit)) / invested;
     }
 
-    function getBalance(address currentInvestor) public view returns (uint256) {
+    function getBalance(address currentInvestor)
+        public
+        view
+        onlyInvestors
+        returns (uint256)
+    {
         return
             investors[investorIDs[currentInvestor]].amountInvested +
             getProfitShare(currentInvestor) -
@@ -407,7 +407,8 @@ contract Game {
     //function() {
     receive() external payable {
         // bet(0);
-        bet();
+        //bet();
+        //startedBankroll += msg.value;
     }
 
     function bet()
@@ -416,28 +417,63 @@ contract Game {
         onlyIfNotStopped
         onlyMoreThanZero
         onlyMoreThanMinInvestment
+        onlyNotInvestors
     {
+        // END NEWINVESTOR
+
+        profitDistribution();
+
+        if (numInvestors == maxInvestors) {
+            uint256 smallestInvestorID = searchSmallestInvestor();
+            divest(investors[smallestInvestorID].investorAddress);
+        }
+
+        numInvestors++;
+        addInvestorAtID(numInvestors);
+        // END NEWINVESTOR
+
         uint256 betValue = msg.value;
 
-        if (
-            (((betValue * ((10000 - edge) - pwin)) / pwin) <=
-                (maxWin * getBankroll()) / 10000)
-        ) {
-            bytes32 myid = randbytes(10, msg.sender);
+        // if (
+        //     (((betValue * ((10000 - edge) - pwin)) / pwin) <=
+        //         (maxWin * getBankroll()) / 10000)
+        // ) {
+        uint256 numerator = ((betValue * ((10000 - edge) - pwin)) / pwin);
+        uint256 denominator = (maxWin * getBankroll()) / 10000;
+        if (numerator <= denominator) {
+            // byte[] memory myid = randbytes(10);
+            uint256 numberRolled = _rand();
+            uint256 myid = _rand();
+
+            // uint256 myid = _randBytes(numberRolled);
 
             bets[myid] = Bet(msg.sender, betValue, 0);
             betsKeys.push(myid);
 
             emit DiceRolled(myid, msg.sender);
 
-            uint256 numberRolled = randrange(1, 10000);
+            // uint256 numberRolled = _rand();
             bets[myid].numberRolled = numberRolled;
             isWinningBet(bets[myid], numberRolled);
             isLosingBet(bets[myid], numberRolled);
             delete profitDistributed;
         } else {
-            require(false, "Transaction must more than one Ether");
+            require(false, "You cannot enter in party");
         }
+    }
+
+    // function numerator() public payable returns (uint256) {
+    //     uint256 betValue = msg.value;
+
+    //     return (betValue * ((10000 - edge) - pwin)) / pwin;
+    // }
+
+    function numerator(uint256 amount) public pure returns (uint256) {
+        return ((amount * ((10000 - edge) - pwin)) / pwin);
+    }
+
+    function denominator() public view returns (uint256) {
+        return (maxWin * getBankroll()) / 10000;
     }
 
     function isWinningBet(Bet memory thisBet, uint256 numberRolled)
@@ -478,24 +514,24 @@ contract Game {
         invested += msg.value;
     }
 
-    function newInvestor()
-        public
-        payable
-        onlyIfNotStopped
-        onlyMoreThanZero
-        onlyNotInvestors
-        onlyMoreThanMinInvestment
-    {
-        profitDistribution();
+    // function newInvestor()
+    //     public
+    //     payable
+    //     onlyIfNotStopped
+    //     onlyMoreThanZero
+    //     onlyNotInvestors
+    //     onlyMoreThanMinInvestment
+    // {
+    //     profitDistribution();
 
-        if (numInvestors == maxInvestors) {
-            uint256 smallestInvestorID = searchSmallestInvestor();
-            divest(investors[smallestInvestorID].investorAddress);
-        }
+    //     if (numInvestors == maxInvestors) {
+    //         uint256 smallestInvestorID = searchSmallestInvestor();
+    //         divest(investors[smallestInvestorID].investorAddress);
+    //     }
 
-        numInvestors++;
-        addInvestorAtID(numInvestors);
-    }
+    //     numInvestors++;
+    //     addInvestorAtID(numInvestors);
+    // }
 
     function divest() public payable onlyInvestors rejectValue {
         divest(msg.sender);
@@ -659,5 +695,117 @@ contract Game {
         } else {
             require(false, "Error occured during emergency withdrawal");
         }
+    }
+
+    // /**
+    //  * @dev Generate random uint <= 256^2
+    //  * @param seed
+    //  * @return uint
+    //  */
+    // function rand(uint256 seed) internal pure returns (uint256) {
+    //     bytes32 data;
+    //     if (seed % 2 == 0) {
+    //         data = keccak256(abi.encodePacked(seed));
+    //     } else {
+    //         data = keccak256(keccak256(abi.encodePacked(seed)));
+    //     }
+    //     uint256 sum;
+    //     for (uint256 i; i < 32; i++) {
+    //         sum += uint256(data[i]);
+    //     }
+    //     return
+    //         uint256(data[sum % data.length]) *
+    //         uint256(data[(sum + 2) % data.length]);
+    // }
+
+    // /**
+    //  * @dev Generate random uint <= 256^2 with seed = block.timestamp
+    //  * @return uint
+    //  */
+    // function randint() internal view returns (uint256) {
+    //     return rand(now);
+    // }
+
+    // /**
+    //  * @dev Generate random uint in range [a, b]
+    //  * @return uint
+    //  */
+    // function randrange(uint256 a, uint256 b) internal view returns (uint256) {
+    //     return a + (randint() % b);
+    // }
+
+    // /**
+    //  * @dev Generate array of random bytes
+    //  * @param size seed
+    //  * @return byte[size]
+    //  */
+    // function randbytes(uint256 size, uint256 seed)
+    //     internal
+    //     pure
+    //     returns (byte[] memory)
+    // {
+    //     byte[] memory data = new byte[](size);
+    //     uint256 x = seed;
+    //     for (uint256 i; i < size; i++) {
+    //         x = rand(x);
+    //         data[i] = byte(x % 256);
+    //     }
+    //     return data;
+    // }
+
+    // /**
+    //  * @dev Generate array of random bytes
+    //  * @param size seed
+    //  * @return byte[size]
+    //  */
+    // function randbytes(uint256 size) internal pure returns (byte[] memory) {
+    //     return randbytes(size, now);
+    // }
+
+    // /**
+    //  * @dev Generate array of random bytes
+    //  * @param size seed
+    //  * @return byte[size]
+    //  * https://ethereum.stackexchange.com/questions/4170/how-to-convert-a-uint-to-bytes-in-solidity
+    //  */
+    // function randbytes() internal pure returns (bytes32 b) {
+    //     //b = new bytes(32);
+    //     uint256 c = randint();
+    //     assembly {
+    //         mstore(add(b, 32), c)
+    //     }
+    // }
+
+    function _randBytes() internal view returns (bytes32 _ret) {
+        uint256 num = _rand();
+        assembly {
+            _ret := mload(0x10)
+            mstore(_ret, 0x20)
+            mstore(add(_ret, 0x20), num)
+        }
+    }
+
+    function _randBytes(uint256 _rand) internal pure returns (bytes32 _ret) {
+        assembly {
+            _ret := mload(0x10)
+            mstore(_ret, 0x20)
+            mstore(add(_ret, 0x20), _rand)
+        }
+    }
+
+    function _rand() internal view returns (uint256) {
+        return
+            uint256(
+                keccak256(abi.encodePacked(now, block.difficulty, msg.sender))
+            ) % 1000;
+    }
+
+    function _randModulus(uint256 mod) internal returns (uint256) {
+        return
+            uint256(
+                keccak256(abi.encodePacked(now, block.difficulty, msg.sender))
+            ) % mod;
+        //nonce++;
+        // return rand;
     }
 }
