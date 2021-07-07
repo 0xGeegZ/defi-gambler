@@ -544,6 +544,8 @@ contract GameETH {
             (((betValue * ((10000 - edge) - pwin)) / pwin) <=
                 (maxWin * getBankroll()) / 10000) && (betValue >= minBet)
         ) {
+            amountWagered += betValue;
+
             // byte[] memory myid = randbytes(10);
             uint256 numberRolled = _rand();
             uint256 myid = _rand();
@@ -651,7 +653,6 @@ contract GameETH {
         delete investors[currentID];
         delete investorIDs[currentInvestor];
         //Reorder investors
-
         if (currentID != numInvestors) {
             // Get last investor
             Investor memory lastInvestor = investors[numInvestors];

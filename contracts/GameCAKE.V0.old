@@ -50,17 +50,16 @@ contract GameCAKE {
     uint256 public constant EMERGENCY_TIMEOUT = 7 days;
 
     //TODO add getter & setter
-    uint256 public minTimeToWithdraw = 1 hours; // 604800 = 1 week
+    uint256 public minTimeToWithdraw = 10 minutes; // 604800 = 1 week
 
     struct WithdrawalProposal {
         address payable toAddress;
         uint256 atTime;
     }
 
-    uint256 public invested = 0; //currently invested
-    uint256 public amountTotal = 0; //total invested
-    uint256 public houseProfit = 0;
+    uint256 public invested = 0;
 
+    address public controller;
     address public owner;
     bool public paused;
 
@@ -68,7 +67,7 @@ contract GameCAKE {
 
     struct Investor {
         address investorAddress;
-        // uint256 amountInvested;
+        uint256 amountInvested;
         bool votedForEmergencyWithdrawal;
     }
 
@@ -89,6 +88,11 @@ contract GameCAKE {
 
     mapping(uint256 => Bet) bets;
     mapping(address => uint256) public betsIDs;
+
+    uint256 public amountWagered = 0;
+    uint256 public investorsProfit = 0;
+    uint256 public investorsLoses = 0;
+    bool profitDistributed;
 
     ///EVENTS
     event BetWon(
@@ -117,17 +121,14 @@ contract GameCAKE {
         owner = msg.sender;
         cake = IBEP20(_cake);
         cakeChef = _cakeChef;
+        profitDistributed = true;
     }
 
     // Function to receive Ether. msg.data must be empty
-    receive() external payable {
-        _stakeCake();
-    }
+    receive() external payable {}
 
     // Fallback function is called when msg.data is not empty
-    fallback() external payable {
-        _stakeCake();
-    }
+    fallback() external payable {}
 
     ///
     /// Main Functions
@@ -147,228 +148,103 @@ contract GameCAKE {
         uint256 balance = cake.balanceOf(address(msg.sender));
         require(balance >= _amount, "not enought"); // onlyMoreThanZero
 
+        _profitDistribution();
+
         //TODO how to divest smallest investors ?
         // if (numInvestors == maxInvestors) {
         //     uint256 smallestInvestorID = searchSmallestInvestor();
         //     divest(investors[smallestInvestorID].investorAddress);
         // }
 
-        require(
-            (((_amount * ((10000 - edge) - pwin)) / pwin) <=
-                (maxWin * getTotalBalance()) / 10000),
-            "You cannot enter in party"
-        );
-
-        numInvestors++;
+        numInvestors += 1;
 
         investorIDs[msg.sender] = numInvestors;
 
         investors[numInvestors].investorAddress = msg.sender;
-        // investors[numInvestors].amountInvested = _amount;
-
+        investors[numInvestors].amountInvested = _amount;
         invested += _amount;
-        amountTotal += _amount;
 
-        //deposit
+        if (
+            (((_amount * ((10000 - edge) - pwin)) / pwin) <=
+                (maxWin * getBankroll()) / 10000)
+        ) {
+            //deposit
 
-        bool success = cake.transferFrom(msg.sender, address(this), _amount);
-        require(success, "Error during transfert"); // onlyMoreThanMinBet
-
-        _stakeCake();
-
-        uint256 _want = cake.balanceOf(address(this));
-
-        if (_want > 0) {
-            // _payFees(_want);
-            _stakeCake();
-        }
-
-        //pick random number
-        uint256 numberRolled = _rand();
-        uint256 myid = _rand();
-        // uint256 myid = _randBytes(numberRolled);
-
-        //TODO create function to instanciate new Bet
-        // bets[numInvestors] = Bet({
-        bets[myid] = Bet({
-            playerAddress: msg.sender,
-            amountBetted: _amount,
-            numberRolled: 0,
-            winAmount: 0,
-            isClaimed: false,
-            isWinned: false,
-            timelock: block.timestamp + minTimeToWithdraw
-        });
-
-        betsIDs[msg.sender] = myid;
-        bets[myid].numberRolled = numberRolled;
-
-        emit DiceRolled(numberRolled, msg.sender);
-
-        //pick winner
-        if (numberRolled - 1 < pwin) {
-            //winning
-            bets[myid].isWinned = true;
-
-            uint256 winAmount = (bets[myid].amountBetted * (10000 - edge)) /
-                pwin;
-
-            // bets[myid].winAmount = bets[myid].amountBetted - winAmount;
-            bets[myid].winAmount = winAmount - bets[myid].amountBetted;
-
-            emit BetWon(
-                bets[myid].playerAddress,
-                bets[myid].numberRolled,
-                bets[myid].winAmount
+            bool success = cake.transferFrom(
+                msg.sender,
+                address(this),
+                _amount
             );
+            require(success, "Error during transfert"); // onlyMoreThanMinBet
+
+            _stakeCake();
+
+            uint256 _want = cake.balanceOf(address(this));
+
+            if (_want > 0) {
+                // _payFees(_want);
+                _stakeCake();
+            }
+
+            //pick random number
+            uint256 numberRolled = _rand();
+            uint256 myid = _rand();
+            // uint256 myid = _randBytes(numberRolled);
+
+            //TODO create function to instanciate new Bet
+            // bets[numInvestors] = Bet({
+            bets[myid] = Bet({
+                playerAddress: msg.sender,
+                amountBetted: _amount,
+                numberRolled: 0,
+                winAmount: 0,
+                isClaimed: false,
+                isWinned: false,
+                timelock: block.timestamp + minTimeToWithdraw
+            });
+
+            betsIDs[msg.sender] = myid;
+            bets[myid].numberRolled = numberRolled;
+
+            emit DiceRolled(numberRolled, msg.sender);
+
+            //pick winner
+            if (numberRolled - 1 < pwin) {
+                //winning
+                bets[myid].isWinned = true;
+
+                uint256 winAmount = (bets[myid].amountBetted * (10000 - edge)) /
+                    pwin;
+
+                // bets[myid].winAmount = bets[myid].amountBetted - winAmount;
+                bets[myid].winAmount = winAmount - bets[myid].amountBetted;
+
+                emit BetWon(
+                    bets[myid].playerAddress,
+                    bets[myid].numberRolled,
+                    bets[myid].winAmount
+                );
+            } else {
+                //Loosing
+                bets[myid].isClaimed = true;
+                emit BetLost(bets[myid].playerAddress, bets[myid].numberRolled);
+                //TODO do not sent but update data to allow user to claim
+                //safeSend(thisBet.playerAddress, 1);
+                investorsProfit +=
+                    ((bets[myid].amountBetted - 1) * (10000 - houseEdge)) /
+                    10000;
+                // uint256 houseProfit = ((bets[myid].amountBetted - 1) *
+                //     (houseEdge)) / 10000;
+                //TODO remuburse initial Bankroll
+                //safeSend(payable(owner), houseProfit);
+            }
+
+            // TODO
+            // delete profitDistributed;
         } else {
-            //Loosing
-            bets[myid].isClaimed = true;
-            emit BetLost(bets[myid].playerAddress, bets[myid].numberRolled);
-            //TODO do not sent but update data to allow user to claim
-            //safeSend(thisBet.playerAddress, 1);
-
-            houseProfit += ((bets[myid].amountBetted) * (houseEdge)) / 10000;
-            //TODO remuburse initial Bankroll
-
-            //safeSend(payable(owner), houseProfit);
-        }
-
-        // TODO
-        // delete profitDistributed;
-    }
-
-    function claimBonus() public {
-        require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
-
-        uint256 betKey = betsIDs[msg.sender];
-
-        require(bets[betKey].isWinned, "Not winned.");
-        require(!bets[betKey].isClaimed, "Already claimed.");
-
-        houseProfit -= bets[betKey].winAmount;
-
-        _leaveStaking(bets[betKey].winAmount);
-
-        uint256 _want = cake.balanceOf(address(this));
-        if (_want > 0) {
-            // _payFees(_want);
-            _stakeCake();
+            require(false, "You cannot enter in party");
         }
     }
-
-    function claimBet() public {
-        require(
-            block.timestamp >= bets[betsIDs[msg.sender]].timelock,
-            "Timelock: release time is before current time"
-        );
-
-        _divest(msg.sender);
-
-        uint256 _want = cake.balanceOf(address(this));
-        if (_want > 0) {
-            // _payFees(_want);
-            _stakeCake();
-        }
-    }
-
-    function stakeCake() public {
-        require(msg.sender == owner, "Only for owner"); //onlyOwner
-        _stakeCake();
-    }
-
-    function getTotalBalance() public view returns (uint256) {
-        // require(msg.sender == owner, "Only for owner"); //onlyOwner
-        return
-            getContractBalance()
-                .add(balanceOfStakedWant()) //will not be correct if we sold syrup
-                .add(balanceOfPendingWant());
-    }
-
-    function forceDivestOfAllInvestors() public payable {
-        require(msg.sender == owner, "Only for owner"); //onlyOwner
-        require(msg.value != 0, "reject value"); //rejectValue
-
-        uint256 copyNumInvestors = numInvestors;
-        for (uint256 i = 1; i <= copyNumInvestors; i++) {
-            _divest(investors[i].investorAddress);
-        }
-    }
-
-    function emergencyWithdrawal() public payable {
-        require(msg.sender == owner, "Only for owner"); //onlyOwner
-        require(msg.value != 0, "reject value"); //rejectValue
-
-        // get money back to players
-        forceDivestOfAllInvestors();
-
-        //unstake other for Owner
-        uint256 balanceOfStakedWant = balanceOfStakedWant();
-        // unstacking
-        CakeChef(cakeChef).leaveStaking(balanceOfStakedWant);
-        // send
-        uint256 _want = cake.balanceOf(address(this));
-        cake.safeTransfer(msg.sender, _want);
-    }
-
-    ///
-    /// PRIVATES FUNCTIONS
-    ///
-    function _stakeCake() internal {
-        if (paused) return; //TODO add pausable requirement
-
-        uint256 _want = cake.balanceOf(address(this));
-        cake.safeApprove(cakeChef, 0);
-        cake.safeApprove(cakeChef, _want);
-        CakeChef(cakeChef).enterStaking(_want);
-    }
-
-    function _leaveStaking(uint256 _amount) internal {
-        // unstacking
-        CakeChef(cakeChef).leaveStaking(_amount);
-        // send
-        cake.safeTransfer(msg.sender, _amount);
-    }
-
-    function _divest(address currentInvestor) private {
-        require(
-            getBalanceFor(currentInvestor) >= 0,
-            "only if investor balance is positive"
-        ); //onlyIfInvestorBalanceIsPositive
-
-        uint256 betKey = betsIDs[currentInvestor];
-        uint256 currentID = investorIDs[currentInvestor];
-
-        uint256 amountToReturn = getBalanceFor(currentInvestor);
-        invested -= amountToReturn;
-        uint256 divestFeeAmount = (amountToReturn * divestFee) / 10000;
-        amountToReturn -= divestFeeAmount;
-
-        _leaveStaking(amountToReturn);
-
-        delete bets[betKey];
-        delete betsIDs[msg.sender];
-
-        delete investors[currentID];
-        delete investorIDs[currentInvestor];
-        //Reorder investors
-        if (currentID != numInvestors) {
-            // Get last investor
-            Investor memory lastInvestor = investors[numInvestors];
-            //Set last investor ID to investorID of divesting account
-            investorIDs[lastInvestor.investorAddress] = currentID;
-            //Copy investor at the new position in the mapping
-            investors[currentID] = lastInvestor;
-            //Delete old position in the mappping
-            delete investors[numInvestors];
-        }
-
-        numInvestors--;
-    }
-
-    ///
-    /// GETTERS FUNCTIONS
-    ///
 
     function getLastBet()
         public
@@ -396,12 +272,184 @@ contract GameCAKE {
         );
     }
 
-    function getHouseProfit() public view returns (uint256) {
-        return houseProfit;
+    function claimBonus() public {
+        require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
+
+        uint256 betKey = betsIDs[msg.sender];
+
+        require(bets[betKey].isWinned, "Not winned.");
+        require(!bets[betKey].isClaimed, "Already claimed.");
+
+        // unstacking
+        CakeChef(cakeChef).leaveStaking(bets[betKey].winAmount);
+        // send
+        cake.safeTransfer(msg.sender, bets[betKey].winAmount);
+
+        // safeSend(payable(bets[betKey].playerAddress), bets[betKey].winAmount);
+
+        // investorsLoses += (bets[betKey].winAmount - bets[betKey].amountBetted);
+
+        uint256 _want = cake.balanceOf(address(this));
+        if (_want > 0) {
+            // _payFees(_want);
+            _stakeCake();
+        }
     }
 
-    function getInvested() public view returns (uint256) {
-        return invested;
+    function claimBet() public {
+        require(
+            getBalanceFor(msg.sender) >= 0,
+            "Only if investissor balance is positive"
+        ); // onlyIfInvestorBalanceIsPositive
+
+        uint256 betKey = betsIDs[msg.sender];
+        require(
+            block.timestamp >= bets[betKey].timelock,
+            "Timelock: release time is before current time"
+        );
+
+        // _profitDistribution();
+
+        uint256 amountToReturn = bets[betKey].amountBetted;
+        invested -= bets[betKey].amountBetted;
+        uint256 divestFeeAmount = (amountToReturn * divestFee) / 10000;
+        amountToReturn -= divestFeeAmount;
+
+        //TODO
+        // unstacking
+        CakeChef(cakeChef).leaveStaking(amountToReturn);
+
+        // send
+        cake.safeTransfer(msg.sender, amountToReturn);
+
+        //TODO emit bet closed
+
+        //TODO Clean User Bet Data
+        delete bets[betKey];
+        delete betsIDs[msg.sender];
+
+        uint256 _want = cake.balanceOf(address(this));
+        if (_want > 0) {
+            // _payFees(_want);
+            _stakeCake();
+        }
+    }
+
+    function divest() public {
+        require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
+        // require(msg.value == 0, "reject value"); //rejectValue
+
+        _divest(msg.sender);
+    }
+
+    ///
+    /// PRIVATES FUNCTIONS
+    ///
+    function _stakeCake() internal {
+        if (paused) return; //TODO add pausable requirement
+
+        uint256 _want = cake.balanceOf(address(this));
+        cake.safeApprove(cakeChef, 0);
+        cake.safeApprove(cakeChef, _want);
+        CakeChef(cakeChef).enterStaking(_want);
+    }
+
+    function _divest(address currentInvestor) private {
+        //TODO TO CONTINUE
+        require(
+            getBalanceFor(currentInvestor) >= 0,
+            "Only if investissor balance is positive"
+        ); // onlyIfInvestorBalanceIsPositive
+
+        uint256 betKey = betsIDs[currentInvestor];
+        require(
+            block.timestamp >= bets[betKey].timelock,
+            "Timelock: release time is before current time"
+        );
+
+        // _profitDistribution();
+
+        uint256 currentID = investorIDs[currentInvestor];
+        uint256 amountToReturn = getBalanceFor(currentInvestor);
+        invested -= investors[currentID].amountInvested;
+        uint256 divestFeeAmount = (amountToReturn * divestFee) / 10000;
+        amountToReturn -= divestFeeAmount;
+
+        delete investors[currentID];
+        delete investorIDs[currentInvestor];
+        //Reorder investors
+
+        if (currentID != numInvestors) {
+            // Get last investor
+            Investor memory lastInvestor = investors[numInvestors];
+            //Set last investor ID to investorID of divesting account
+            investorIDs[lastInvestor.investorAddress] = currentID;
+            //Copy investor at the new position in the mapping
+            investors[currentID] = lastInvestor;
+            //Delete old position in the mappping
+            delete investors[numInvestors];
+        }
+
+        numInvestors--;
+        //TODO
+        // safeSend(payable(currentInvestor), amountToReturn); OK
+        // safeSend(payable(owner), divestFeeAmount);
+
+        // // unstacking
+        // CakeChef(cakeChef).leaveStaking(amountToReturn);
+
+        // // send
+        // cake.safeTransfer(currentInvestor, amountToReturn);
+
+        //TODO Clean User Bet Data
+        delete bets[betKey];
+        delete betsIDs[currentInvestor];
+    }
+
+    function _profitDistribution() private {
+        require(profitDistributed, "only if profit not distributed"); //onlyIfProfitNotDistributed
+        uint256 copyInvested;
+
+        for (uint256 i = 1; i <= numInvestors; i++) {
+            address currentInvestor = investors[i].investorAddress;
+            uint256 profitOfInvestor = getProfitShare(currentInvestor);
+            uint256 losesOfInvestor = getLosesShare(currentInvestor);
+            investors[i].amountInvested += profitOfInvestor - losesOfInvestor;
+            copyInvested += investors[i].amountInvested;
+        }
+
+        delete investorsProfit;
+        delete investorsLoses;
+        invested = copyInvested;
+
+        profitDistributed = true;
+    }
+
+    ///
+    /// HELPERS FUNCTIONS
+    ///
+
+    function balanceOfStakedWant() public view returns (uint256) {
+        (uint256 _amount, ) = CakeChef(cakeChef).userInfo(
+            uint256(0),
+            address(this)
+        );
+        return _amount;
+    }
+
+    function balanceOfPendingWant() public view returns (uint256) {
+        return CakeChef(cakeChef).pendingCake(uint256(0), address(this));
+    }
+
+    function getTotalBalance() public view returns (uint256) {
+        return
+            getContractBalance()
+                .add(balanceOfStakedWant()) //will not be correct if we sold syrup
+                .add(balanceOfPendingWant());
+    }
+
+    function getContractBalance() public view returns (uint256) {
+        return cake.balanceOf(address(this));
     }
 
     function getBalanceFor(address currentInvestor)
@@ -411,8 +459,10 @@ contract GameCAKE {
     {
         require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
 
-        return bets[betsIDs[currentInvestor]].amountBetted;
-        // return investors[investorIDs[currentInvestor]].amountInvested;
+        return
+            investors[investorIDs[currentInvestor]].amountInvested +
+            getProfitShare(currentInvestor) -
+            getLosesShare(currentInvestor);
     }
 
     function getMinInvestment() public view returns (uint256) {
@@ -424,29 +474,7 @@ contract GameCAKE {
         }
     }
 
-    ///
-    /// HELPERS FUNCTIONS
-    ///
-
-    function balanceOfStakedWant() internal view returns (uint256) {
-        // require(msg.sender == owner, "Only for owner");
-
-        (uint256 _amount, ) = CakeChef(cakeChef).userInfo(
-            uint256(0),
-            address(this)
-        );
-        return _amount;
-    }
-
-    function balanceOfPendingWant() internal view returns (uint256) {
-        return CakeChef(cakeChef).pendingCake(uint256(0), address(this));
-    }
-
-    function getContractBalance() internal view returns (uint256) {
-        return cake.balanceOf(address(this));
-    }
-
-    function searchSmallestInvestor() internal view returns (uint256) {
+    function searchSmallestInvestor() public view returns (uint256) {
         uint256 investorID = 1;
         for (uint256 i = 1; i <= numInvestors; i++) {
             if (
@@ -460,6 +488,30 @@ contract GameCAKE {
         return investorID;
     }
 
+    function getBankroll() public view returns (uint256) {
+        return startedBankroll + invested + investorsProfit - investorsLoses;
+    }
+
+    function getLosesShare(address currentInvestor)
+        public
+        view
+        returns (uint256)
+    {
+        return
+            (investors[investorIDs[currentInvestor]].amountInvested *
+                (investorsLoses)) / invested;
+    }
+
+    function getProfitShare(address currentInvestor)
+        public
+        view
+        returns (uint256)
+    {
+        return
+            (investors[investorIDs[currentInvestor]].amountInvested *
+                (investorsProfit)) / invested;
+    }
+
     ///
     /// DEBUG FUNCTIONS
     ///
@@ -469,7 +521,7 @@ contract GameCAKE {
     }
 
     function denominator() public view returns (uint256) {
-        return ((maxWin * getTotalBalance()) / 10000);
+        return ((maxWin * getBankroll()) / 10000);
     }
 
     ///
@@ -516,48 +568,3 @@ contract GameCAKE {
             ) % 10000;
     }
 }
-
-// function divest(address _address) public {
-//     uint256 betKey = betsIDs[msg.sender];
-//     require(
-//         block.timestamp >= bets[betKey].timelock,
-//         "Timelock: release time is before current time"
-//     );
-
-//     // _profitDistribution();
-//     uint256 amountToReturn = getBalanceFor(msg.sender);
-//     invested -= amountToReturn;
-//     uint256 divestFeeAmount = (amountToReturn * divestFee) / 10000;
-//     amountToReturn -= divestFeeAmount;
-
-//     //TODO QUASI SAME PART AS
-//     // unstacking
-//     CakeChef(cakeChef).leaveStaking(amountToReturn);
-
-//     // send
-//     cake.safeTransfer(msg.sender, amountToReturn);
-
-//     //TODO emit bet closed
-
-//     //TODO Clean User Bet Data
-//     delete bets[betKey];
-//     delete betsIDs[msg.sender];
-
-//     uint256 currentID = investorIDs[msg.sender];
-//     delete investors[currentID];
-//     delete investorIDs[msg.sender];
-//     //Reorder investors
-//     if (currentID != numInvestors) {
-//         // Get last investor
-//         Investor memory lastInvestor = investors[numInvestors];
-//         //Set last investor ID to investorID of divesting account
-//         investorIDs[lastInvestor.investorAddress] = currentID;
-//         //Copy investor at the new position in the mapping
-//         investors[currentID] = lastInvestor;
-//         //Delete old position in the mappping
-//         delete investors[numInvestors];
-//     }
-
-//     numInvestors--;
-//     //TODO END QUASI SAME PART AS
-// }

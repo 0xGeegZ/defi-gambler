@@ -45,14 +45,16 @@ contract(
       let value = ethers.utils.parseEther("100")
 
       // TODO is that better for cake token ? let value = ethers.utils.parseUnits("100", 18)
-
       await this.cake.mint(alice, value, { from: minter })
+
+      value = ethers.utils.parseEther("10")
+      await this.cake.mint(this.game.address, value, { from: minter })
 
       await this.cake.transferOwnership(this.chef.address, { from: minter })
       await this.syrup.transferOwnership(this.chef.address, { from: minter })
     })
 
-    it("Tests", async () => {
+    it("should bet one cake and wait to claim back bet", async () => {
       let balanceAlice = await this.cake.balanceOf(alice)
       console.log(
         "🚀 starting balance - Alice",
@@ -62,32 +64,42 @@ contract(
       // token.increaseAllowance(receiver.address, 1000)
       // await this.cake.approve(this.chef.address, "100", { from: alice })
 
-      await this.cake.approve(
-        this.game.address,
-        ethers.utils.parseEther("10"),
-        { from: alice }
-      )
-
-      console.log("🚀 betting 10 Cakes ")
+      await this.cake.approve(this.game.address, ethers.utils.parseEther("1"), {
+        from: alice
+      })
 
       let value = ethers.utils.parseUnits("1", 18)
 
-      const numerator = await this.game.numerator(value)
-      const denominator = await this.game.denominator()
-      const getBankroll = await this.game.getBankroll()
+      let numerator = await this.game.numerator(value)
+      numerator = ethers.utils.formatEther(numerator.toString())
+
+      let denominator = await this.game.denominator()
+      denominator = ethers.utils.formatEther(denominator.toString())
+
+      let getInvested = await this.game.getInvested()
+      getInvested = ethers.utils.formatEther(getInvested.toString())
+
+      let getTotalBalance = await this.game.getTotalBalance()
+      getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
+
+      let balanceSirup = await this.syrup.balanceOf(this.game.address)
+      balanceSirup = ethers.utils.formatEther(balanceSirup.toString())
+
+      let balanceCake = await this.cake.balanceOf(this.game.address)
+      balanceCake = ethers.utils.formatEther(balanceCake.toString())
 
       console.log("===============================")
+      console.log("🚀 get Contract Invested", getInvested)
+      console.log("🚀 get Contract Total Balance", getTotalBalance)
+      console.log("🚀 get Contract Syrup Balance", balanceSirup.toString())
+      console.log("🚀 get Contract Cake Balance", balanceCake.toString())
+
       console.log(
-        "🚀 get Contract Bankroll",
-        ethers.utils.formatEther(getBankroll.toString())
+        `${numerator} <= ${denominator} : ${numerator <= denominator}`
       )
-      console.log(
-        `${ethers.utils.formatEther(
-          numerator.toString()
-        )} <= ${ethers.utils.formatEther(denominator.toString())}`
-      )
-      console.log(numerator <= denominator)
       console.log("===============================")
+
+      console.log("🚀 betting 1 Cakes ")
 
       await this.game.bet(value, {
         from: alice
@@ -97,6 +109,25 @@ contract(
         "🚀 balance - Alice",
         ethers.utils.formatEther(balanceAlice.toString())
       )
+
+      getInvested = await this.game.getInvested()
+      getInvested = ethers.utils.formatEther(getInvested.toString())
+
+      getTotalBalance = await this.game.getTotalBalance()
+      getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
+
+      balanceSirup = await this.syrup.balanceOf(this.game.address)
+      balanceSirup = ethers.utils.formatEther(balanceSirup.toString())
+
+      balanceCake = await this.cake.balanceOf(this.game.address)
+      balanceCake = ethers.utils.formatEther(balanceCake.toString())
+
+      console.log("===============================")
+      console.log("🚀 get Contract Invested", getInvested)
+      console.log("🚀 get Contract Total Balance", getTotalBalance)
+      console.log("🚀 get Contract Syrup Balance", balanceSirup.toString())
+      console.log("🚀 get Contract Cake Balance", balanceCake.toString())
+      console.log("===============================")
 
       const getLastBet = await this.game.getLastBet({ from: alice })
       console.log(`🚀 getLastBet : 
@@ -108,13 +139,205 @@ contract(
       isWinned : ${getLastBet["5"]}`)
 
       //TODO manage loose case
-      await this.game.claim({ from: alice })
+      await this.game.claimBonus({ from: alice })
       balanceAlice = await this.cake.balanceOf(alice)
       console.log(
-        "🚀 ending balance - Alice",
+        "🚀 balance after claim winned amount - Alice",
         ethers.utils.formatEther(balanceAlice.toString())
       )
+      console.log("advanceBlockTo - 1 minutes")
+      //TODO create getter & setter for minTimeToWithdraw = 604800
+      await time.increase(60 * 60)
+
+      //divest
+      await this.game.claimBet({ from: alice })
+      // divest = ethers.utils.formatEther(divest.toString())
+      // console.log("🚀 divest amount - Alice", JSON.stringify(divest))
+
+      balanceAlice = await this.cake.balanceOf(alice)
+      balanceAlice = ethers.utils.formatEther(balanceAlice.toString())
+
+      console.log(
+        "🚀 balance after unstacking bet amount - Alice",
+        balanceAlice
+      )
+
+      //check contract bankroll
+      getInvested = await this.game.getInvested()
+      getInvested = ethers.utils.formatEther(getInvested.toString())
+      console.log("🚀 get Contract Invested", getInvested)
+
+      getTotalBalance = await this.game.getTotalBalance()
+      getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
+      console.log("🚀 get Contract Total Balance", getTotalBalance)
+
+      // let getHouseProfit = await this.game.getHouseProfit()
+      // console.log(
+      //   "🚀 get Contract Total Total Profit",
+      //   JSON.stringify(getHouseProfit)
+      // )
+      // getHouseProfit = ethers.utils.formatEther(getHouseProfit.toString())
+      // console.log("🚀 get Contract Total Total Profit", getHouseProfit)
     })
+
+    // it("should bet one cake and wait to claim back bet", async () => {
+    //   let balanceAlice = await this.cake.balanceOf(alice)
+    //   console.log(
+    //     "🚀 starting balance - Alice",
+    //     ethers.utils.formatEther(balanceAlice.toString())
+    //   )
+
+    //   // token.increaseAllowance(receiver.address, 1000)
+    //   // await this.cake.approve(this.chef.address, "100", { from: alice })
+
+    //   await this.cake.approve(this.game.address, ethers.utils.parseEther("1"), {
+    //     from: alice
+    //   })
+
+    //   console.log("🚀 betting 1 Cakes ")
+
+    //   let value = ethers.utils.parseUnits("1", 18)
+
+    //   let numerator = await this.game.numerator(value)
+    //   numerator = ethers.utils.formatEther(numerator.toString())
+
+    //   let denominator = await this.game.denominator()
+    //   denominator = ethers.utils.formatEther(denominator.toString())
+
+    //   // let getInvested = await this.game.getInvested()
+    //   // getInvested = ethers.utils.formatEther(getInvested.toString())
+
+    //   let getTotalBalance = await this.game.getTotalBalance()
+    //   getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
+
+    //   console.log("===============================")
+    //   // console.log("🚀 get Contract Bankroll", getInvested)
+    //   console.log("🚀 get Contract Total Balance", getTotalBalance)
+    //   console.log(
+    //     `${numerator} <= ${denominator} : ${numerator <= denominator}`
+    //   )
+    //   console.log("===============================")
+
+    //   await this.game.bet(value, {
+    //     from: alice
+    //   })
+    //   balanceAlice = await this.cake.balanceOf(alice)
+    //   console.log(
+    //     "🚀 balance - Alice",
+    //     ethers.utils.formatEther(balanceAlice.toString())
+    //   )
+
+    //   const getLastBet = await this.game.getLastBet({ from: alice })
+    //   console.log(`🚀 getLastBet :
+    //   playerAddress : ${getLastBet["0"]}
+    //   amountBetted : ${getLastBet["1"]}
+    //   numberRolled : ${getLastBet["2"]}
+    //   winAmount : ${ethers.utils.formatEther(getLastBet["3"].toString())}
+    //   isClaimed : ${getLastBet["4"]}
+    //   isWinned : ${getLastBet["5"]}`)
+
+    //   //TODO manage loose case
+    //   await this.game.claimBonus({ from: alice })
+    //   balanceAlice = await this.cake.balanceOf(alice)
+    //   console.log(
+    //     "🚀 balance after claim winned amount - Alice",
+    //     ethers.utils.formatEther(balanceAlice.toString())
+    //   )
+    //   console.log("advanceBlockTo - 1 minutes")
+    //   //TODO create getter & setter for minTimeToWithdraw = 604800
+    //   await time.increase(60)
+
+    //   //divest
+    //   await this.game.claimBet({ from: alice })
+    //   // divest = ethers.utils.formatEther(divest.toString())
+    //   // console.log("🚀 divest amount - Alice", JSON.stringify(divest))
+
+    //   balanceAlice = await this.cake.balanceOf(alice)
+    //   balanceAlice = ethers.utils.formatEther(balanceAlice.toString())
+
+    //   console.log(
+    //     "🚀 balance after unstacking bet amount - Alice",
+    //     balanceAlice
+    //   )
+
+    //   //check contract bankroll
+    //   // getInvested = await this.game.getInvested()
+    //   // getInvested = ethers.utils.formatEther(getInvested.toString())
+    //   // console.log("🚀 get Contract Bankroll", getInvested)
+
+    //   getTotalBalance = await this.game.getTotalBalance()
+    //   getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
+    //   console.log("🚀 get Contract Total Balance", getTotalBalance)
+    // })
+
+    // it("SHould be locked by timelock", async () => {
+    //   //TODO add try catch
+    //   let balanceAlice = await this.cake.balanceOf(alice)
+    //   console.log(
+    //     "🚀 starting balance - Alice",
+    //     ethers.utils.formatEther(balanceAlice.toString())
+    //   )
+
+    //   await this.cake.approve(
+    //     this.game.address,
+    //     ethers.utils.parseEther("10"),
+    //     { from: alice }
+    //   )
+
+    //   console.log("🚀 betting 10 Cakes ")
+
+    //   let value = ethers.utils.parseUnits("1", 18)
+
+    //   let numerator = await this.game.numerator(value)
+    //   numerator = ethers.utils.formatEther(numerator.toString())
+
+    //   let denominator = await this.game.denominator()
+    //   denominator = ethers.utils.formatEther(denominator.toString())
+
+    //   let getInvested = await this.game.getInvested()
+    //   getInvested = ethers.utils.formatEther(getInvested.toString())
+
+    //   console.log("===============================")
+    //   console.log("🚀 get Contract Bankroll", getInvested)
+    //   console.log(
+    //     `${numerator} <= ${denominator} : ${numerator <= denominator}`
+    //   )
+    //   console.log("===============================")
+
+    //   await this.game.bet(value, {
+    //     from: alice
+    //   })
+    //   balanceAlice = await this.cake.balanceOf(alice)
+    //   console.log(
+    //     "🚀 balance - Alice",
+    //     ethers.utils.formatEther(balanceAlice.toString())
+    //   )
+
+    //   const getLastBet = await this.game.getLastBet({ from: alice })
+    //   console.log(`🚀 getLastBet :
+    //   playerAddress : ${getLastBet["0"]}
+    //   amountBetted : ${getLastBet["1"]}
+    //   numberRolled : ${getLastBet["2"]}
+    //   winAmount : ${ethers.utils.formatEther(getLastBet["3"].toString())}
+    //   isClaimed : ${getLastBet["4"]}
+    //   isWinned : ${getLastBet["5"]}`)
+
+    //   console.log("advanceBlockTo - 1 minutes")
+    //   //TODO create getter & setter for minTimeToWithdraw = 604800
+    //   await time.increase(30)
+
+    //   //TODO manage loose case
+    //   await this.game.claimBonus({ from: alice })
+    //   balanceAlice = await this.cake.balanceOf(alice)
+    //   console.log(
+    //     "🚀 ending balance - Alice",
+    //     ethers.utils.formatEther(balanceAlice.toString())
+    //   )
+
+    //   getInvested = await this.game.getInvested()
+    //   getInvested = ethers.utils.formatEther(getInvested.toString())
+    //   console.log("🚀 get Contract Bankroll", getInvested)
+    // })
 
     // it("Tests", async () => {
     //   let balanceAlice = await this.cake.balanceOf(alice)
