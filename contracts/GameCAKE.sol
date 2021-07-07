@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "./interfaces/ICakeChef.sol";
 
 contract GameCAKE {
+    //TODO Looks to work on all EVM chains with ERC20 standard (not necessarly true with BEP20)
     // import "@openzeppelin/contracts/math/SafeMath.sol";
     // import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
     // import "@openzeppelin/contracts/token/ERC20/IBEP20.sol";
@@ -17,22 +18,13 @@ contract GameCAKE {
     using Address for address;
     using SafeMath for uint256;
     using Math for uint256;
+
     // The CAKE TOKEN!
     IBEP20 public cake;
     address public cakeChef;
 
     //TODO add verification with this constant
     uint256 private constant ROLL_IN_PROGRESS = 42;
-
-    // uint256 public pwin = 90; //probability of winning (100 = 100%)
-    // uint256 public edge = 1.9; //edge percentage (100 = 100%)
-    // uint256 public maxWin = 1; //max win (before edge is taken) as percentage of bankroll (100 = 100%)
-    // uint256 public minBet = 1; // 0,1 BNB - https://eth-converter.com/
-    // // uint256 constant minBet = 1 ether; // 1 BNB - https://eth-converter.com/
-    // uint256 public maxInvestors = 10; //maximum number of investors
-    // uint256 public houseEdge = 0.9; //edge percentage (100 = 100%)
-    // uint256 public divestFee = 0.5; //divest fee percentage (100 = 100%)
-    // uint256 public emergencyWithdrawalRatio = 0.1; //ratio percentage (100 = 100%)
 
     uint256 public pwin = 9000; //probability of winning (10000 = 100%)
     uint256 public edge = 190; //edge percentage (10000 = 100%)
@@ -49,13 +41,7 @@ contract GameCAKE {
     uint256 private constant INVALID_BET_MARKER = 99999;
     uint256 public constant EMERGENCY_TIMEOUT = 7 days;
 
-    //TODO add getter & setter
     uint256 public minTimeToWithdraw = 1 hours; // 604800 = 1 week
-
-    struct WithdrawalProposal {
-        address payable toAddress;
-        uint256 atTime;
-    }
 
     uint256 public invested = 0; //currently invested
     uint256 public amountTotal = 0; //total invested
@@ -63,8 +49,6 @@ contract GameCAKE {
 
     address public owner;
     bool public paused;
-
-    WithdrawalProposal public proposedWithdrawal;
 
     struct Investor {
         address investorAddress;
@@ -97,14 +81,9 @@ contract GameCAKE {
         uint256 amountWon
     );
     event BetLost(address playerAddress, uint256 numberRolled);
-    event EmergencyWithdrawalProposed();
-    event EmergencyWithdrawalFailed(address withdrawalAddress);
-    event EmergencyWithdrawalSucceeded(
-        address withdrawalAddress,
-        uint256 amountWithdrawn
-    );
+
+    //TODO use it to manage error
     event FailedSend(address receiver, uint256 amount);
-    event ValueIsTooBig();
 
     event DiceRolled(uint256 indexed requestId, address indexed roller);
     event DiceLanded(uint256 indexed requestId, uint256 indexed result);
@@ -141,9 +120,8 @@ contract GameCAKE {
         require(investorIDs[msg.sender] == 0, "Only for not investors"); // onlyNotInvestors
 
         uint256 allowance = cake.allowance(msg.sender, address(this));
-        // uint256 allowance = cake.increaseAllowance(msg.sender, address(this));
-
         require(allowance >= _amount, "Check the token allowance");
+
         uint256 balance = cake.balanceOf(address(msg.sender));
         require(balance >= _amount, "not enought"); // onlyMoreThanZero
 
@@ -162,7 +140,6 @@ contract GameCAKE {
         numInvestors++;
 
         investorIDs[msg.sender] = numInvestors;
-
         investors[numInvestors].investorAddress = msg.sender;
         // investors[numInvestors].amountInvested = _amount;
 
@@ -170,16 +147,13 @@ contract GameCAKE {
         amountTotal += _amount;
 
         //deposit
-
         bool success = cake.transferFrom(msg.sender, address(this), _amount);
         require(success, "Error during transfert"); // onlyMoreThanMinBet
 
         _stakeCake();
 
         uint256 _want = cake.balanceOf(address(this));
-
         if (_want > 0) {
-            // _payFees(_want);
             _stakeCake();
         }
 
@@ -188,7 +162,6 @@ contract GameCAKE {
         uint256 myid = _rand();
         // uint256 myid = _randBytes(numberRolled);
 
-        //TODO create function to instanciate new Bet
         // bets[numInvestors] = Bet({
         bets[myid] = Bet({
             playerAddress: msg.sender,
@@ -203,7 +176,10 @@ contract GameCAKE {
         betsIDs[msg.sender] = myid;
         bets[myid].numberRolled = numberRolled;
 
-        emit DiceRolled(numberRolled, msg.sender);
+        emit DiceRolled(myid, msg.sender);
+
+        //TODO manage second call in oracle callback
+        emit DiceLanded(myid, numberRolled);
 
         //pick winner
         if (numberRolled - 1 < pwin) {
@@ -213,7 +189,6 @@ contract GameCAKE {
             uint256 winAmount = (bets[myid].amountBetted * (10000 - edge)) /
                 pwin;
 
-            // bets[myid].winAmount = bets[myid].amountBetted - winAmount;
             bets[myid].winAmount = winAmount - bets[myid].amountBetted;
 
             emit BetWon(
@@ -224,21 +199,17 @@ contract GameCAKE {
         } else {
             //Loosing
             bets[myid].isClaimed = true;
-            emit BetLost(bets[myid].playerAddress, bets[myid].numberRolled);
-            //TODO do not sent but update data to allow user to claim
-            //safeSend(thisBet.playerAddress, 1);
 
+            //TODO House Profit seems to be on erro
             houseProfit += ((bets[myid].amountBetted) * (houseEdge)) / 10000;
             //TODO remuburse initial Bankroll
 
-            //safeSend(payable(owner), houseProfit);
+            emit BetLost(bets[myid].playerAddress, bets[myid].numberRolled);
         }
-
-        // TODO
-        // delete profitDistributed;
     }
 
     function claimBonus() public {
+        require(!paused, "Contract is stopped"); // onlyIfNotStopped
         require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
 
         uint256 betKey = betsIDs[msg.sender];
@@ -258,6 +229,8 @@ contract GameCAKE {
     }
 
     function claimBet() public {
+        require(!paused, "Contract is stopped"); // onlyIfNotStopped
+        require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
         require(
             block.timestamp >= bets[betsIDs[msg.sender]].timelock,
             "Timelock: release time is before current time"
@@ -286,6 +259,7 @@ contract GameCAKE {
     }
 
     function forceDivestOfAllInvestors() public payable {
+        require(paused, "Contract is not stopped"); // onlyIfNotStopped
         require(msg.sender == owner, "Only for owner"); //onlyOwner
         require(msg.value != 0, "reject value"); //rejectValue
 
@@ -296,6 +270,7 @@ contract GameCAKE {
     }
 
     function emergencyWithdrawal() public payable {
+        // require(paused, "Contract is not stopped"); // onlyIfNotStopped
         require(msg.sender == owner, "Only for owner"); //onlyOwner
         require(msg.value != 0, "reject value"); //rejectValue
 
@@ -330,7 +305,7 @@ contract GameCAKE {
         cake.safeTransfer(msg.sender, _amount);
     }
 
-    function _divest(address currentInvestor) private {
+    function _divest(address currentInvestor) internal {
         require(
             getBalanceFor(currentInvestor) >= 0,
             "only if investor balance is positive"
@@ -364,6 +339,14 @@ contract GameCAKE {
         }
 
         numInvestors--;
+    }
+
+    ///
+    /// SETTERS FUNCTIONS
+    ///
+    function setMinTimeToWithdraw(uint256 _minTimeToWithdraw) public {
+        require(msg.sender == owner, "Only for owner"); //onlyOwner
+        minTimeToWithdraw = _minTimeToWithdraw;
     }
 
     ///
@@ -422,6 +405,10 @@ contract GameCAKE {
         } else {
             return 0;
         }
+    }
+
+    function getMinTimeToWithdraw() public view returns (uint256) {
+        return minTimeToWithdraw;
     }
 
     ///
@@ -516,48 +503,3 @@ contract GameCAKE {
             ) % 10000;
     }
 }
-
-// function divest(address _address) public {
-//     uint256 betKey = betsIDs[msg.sender];
-//     require(
-//         block.timestamp >= bets[betKey].timelock,
-//         "Timelock: release time is before current time"
-//     );
-
-//     // _profitDistribution();
-//     uint256 amountToReturn = getBalanceFor(msg.sender);
-//     invested -= amountToReturn;
-//     uint256 divestFeeAmount = (amountToReturn * divestFee) / 10000;
-//     amountToReturn -= divestFeeAmount;
-
-//     //TODO QUASI SAME PART AS
-//     // unstacking
-//     CakeChef(cakeChef).leaveStaking(amountToReturn);
-
-//     // send
-//     cake.safeTransfer(msg.sender, amountToReturn);
-
-//     //TODO emit bet closed
-
-//     //TODO Clean User Bet Data
-//     delete bets[betKey];
-//     delete betsIDs[msg.sender];
-
-//     uint256 currentID = investorIDs[msg.sender];
-//     delete investors[currentID];
-//     delete investorIDs[msg.sender];
-//     //Reorder investors
-//     if (currentID != numInvestors) {
-//         // Get last investor
-//         Investor memory lastInvestor = investors[numInvestors];
-//         //Set last investor ID to investorID of divesting account
-//         investorIDs[lastInvestor.investorAddress] = currentID;
-//         //Copy investor at the new position in the mapping
-//         investors[currentID] = lastInvestor;
-//         //Delete old position in the mappping
-//         delete investors[numInvestors];
-//     }
-
-//     numInvestors--;
-//     //TODO END QUASI SAME PART AS
-// }
