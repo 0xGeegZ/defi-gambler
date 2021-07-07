@@ -1,21 +1,37 @@
 pragma solidity ^0.6.12;
 
-contract Game {
+contract GameETH {
     //TODO add verification with this constant
     uint256 private constant ROLL_IN_PROGRESS = 42;
 
-    uint256 constant pwin = 9000; //probability of winning (10000 = 100%)
-    uint256 constant edge = 190; //edge percentage (10000 = 100%)
-    uint256 constant maxWin = 100; //max win (before edge is taken) as percentage of bankroll (10000 = 100%)
-    uint256 constant minBet = 100000000000000000 wei; // 0,1 BNB - https://eth-converter.com/
-    uint256 constant maxInvestors = 10; //maximum number of investors
-    uint256 constant houseEdge = 90; //edge percentage (10000 = 100%)
-    uint256 constant divestFee = 50; //divest fee percentage (10000 = 100%)
-    uint256 constant emergencyWithdrawalRatio = 10; //ratio percentage (100 = 100%)
+    uint256 public pwin = 9000; //probability of winning (10000 = 100%)
+    uint256 public edge = 190; //edge percentage (10000 = 100%)
+    uint256 public maxWin = 100; //max win (before edge is taken) as percentage of bankroll (10000 = 100%)
+    uint256 public minBet = 100000000000000000 wei; // 0,1 BNB - https://eth-converter.com/
+    // uint256 constant minBet = 1 ether; // 1 BNB - https://eth-converter.com/
+    uint256 public maxInvestors = 10; //maximum number of investors
+    uint256 public houseEdge = 90; //edge percentage (10000 = 100%)
+    uint256 public divestFee = 50; //divest fee percentage (10000 = 100%)
+    uint256 public emergencyWithdrawalRatio = 10; //ratio percentage (100 = 100%)
 
-    uint256 safeGas = 25000;
-    uint256 constant INVALID_BET_MARKER = 99999;
-    uint256 constant EMERGENCY_TIMEOUT = 7 days;
+    uint256 private safeGas = 25000;
+    uint256 private constant INVALID_BET_MARKER = 99999;
+    uint256 public constant EMERGENCY_TIMEOUT = 7 days;
+
+    struct WithdrawalProposal {
+        address payable toAddress;
+        uint256 atTime;
+    }
+
+    uint256 public invested = 0;
+    uint256 public startedBankroll = 10 ether; //10 Ethers
+    // uint256 public startedBankroll = 500000000000000000 wei;
+
+    address public controller;
+    address public owner;
+    bool public paused;
+
+    WithdrawalProposal public proposedWithdrawal;
 
     struct Investor {
         address investorAddress;
@@ -27,30 +43,20 @@ contract Game {
         address playerAddress;
         uint256 amountBetted;
         uint256 numberRolled;
-    }
-
-    struct WithdrawalProposal {
-        address payable toAddress;
-        uint256 atTime;
+        bool isWinned;
+        bool isClaimed;
+        // uint256 timelock;
     }
 
     //Starting at 1
-    mapping(address => uint256) public investorIDs;
     mapping(uint256 => Investor) public investors;
+    mapping(address => uint256) public investorIDs;
     uint256 public numInvestors = 0;
-
-    uint256 public invested = 0;
-    uint256 public startedBankroll = 500000000000000000 wei;
-
-    address controller;
-    address owner;
-    bool public paused;
-
-    WithdrawalProposal public proposedWithdrawal;
 
     // mapping(bytes32 => Bet) bets;
     // bytes32[] betsKeys;
     mapping(uint256 => Bet) bets;
+    mapping(address => uint256) public betsIDs;
     uint256[] betsKeys;
 
     uint256 public amountWagered = 0;
@@ -139,7 +145,7 @@ contract Game {
             _;
         } else {
             bets[myid].numberRolled = INVALID_BET_MARKER;
-            safeSend(thisBet.playerAddress, thisBet.amountBetted);
+            safeSend(payable(thisBet.playerAddress), thisBet.amountBetted);
             return;
         }
     }
@@ -154,7 +160,7 @@ contract Game {
             thisBet.numberRolled == 0
         ) {
             bets[myid].numberRolled = INVALID_BET_MARKER;
-            safeSend(thisBet.playerAddress, thisBet.amountBetted);
+            safeSend(payable(thisBet.playerAddress), thisBet.amountBetted);
             return;
         }
         _;
@@ -269,7 +275,9 @@ contract Game {
         returns (
             address,
             uint256,
-            uint256
+            uint256,
+            bool,
+            bool
         )
     {
         if (id < betsKeys.length) {
@@ -277,9 +285,70 @@ contract Game {
             return (
                 bets[betKey].playerAddress,
                 bets[betKey].amountBetted,
-                bets[betKey].numberRolled
+                bets[betKey].numberRolled,
+                bets[betKey].isClaimed,
+                bets[betKey].isWinned
             );
         }
+    }
+
+    //TODO only current investor
+    function getLastBet()
+        public
+        view
+        onlyInvestors
+        returns (
+            address,
+            uint256,
+            uint256,
+            bool,
+            bool
+        )
+    {
+        // uint256 id = investorIDs[currentInvestor];
+        // uint256 betKey = betsKeys[id];
+
+        uint256 betKey = betsIDs[msg.sender];
+
+        return (
+            bets[betKey].playerAddress,
+            bets[betKey].amountBetted,
+            bets[betKey].numberRolled,
+            bets[betKey].isClaimed,
+            bets[betKey].isWinned
+        );
+    }
+
+    //TODO only if win current investor
+    function claim() public onlyInvestors {
+        //TODO create modifiers
+        uint256 betKey = betsIDs[msg.sender];
+
+        require(bets[betKey].isWinned, "Not winned.");
+        require(!bets[betKey].isClaimed, "Already claimed.");
+
+        bets[betKey].isClaimed = true;
+        uint256 winAmount = (bets[betKey].amountBetted * (10000 - edge)) / pwin;
+        emit BetWon(
+            bets[betKey].playerAddress,
+            bets[betKey].numberRolled,
+            winAmount
+        );
+
+        // TODO do not sent but update data to allow user to claim
+        safeSend(payable(bets[betKey].playerAddress), winAmount);
+
+        //returning all value to user
+        // safeSend(
+        //     bets[betKey].playerAddress,
+        //     bets[betKey].amountBetted + winAmount
+        // );
+
+        investorsLoses += (winAmount - bets[betKey].amountBetted);
+
+        //TODO Clean User Bet Data
+        // delete bets[betKey];
+        // delete betsIDs[msg.sender];
     }
 
     function numBets() public view returns (uint256) {
@@ -352,31 +421,58 @@ contract Game {
     }
 
     // PRIVATE HELPERS FUNCTION
-
-    function safeSend(address addr, uint256 value) private {
-        if (address(this).balance < value) {
+    function safeSend(address payable _to, uint256 _value) public payable {
+        if (address(this).balance < _value) {
             emit ValueIsTooBig();
             return;
         }
 
-        //TODO keep a litle to send transactions
+        // Call returns a boolean value indicating success or failure.
+        // This is the current recommended method to use.
+        // (bool sent, bytes memory data) = _to.call{value: _value}("");
+        (bool sent, ) = _to.call{value: _value}("");
 
-        (bool success, ) = addr.call{value: value, gas: safeGas}("");
-        //require(success, "Transfer failed.");
-        if (!success) {
-            //if (!(addr.call{value: value, gas: safeGas}(""))) {
-            FailedSend(addr, value);
-            if (addr != owner) {
+        if (!sent) {
+            FailedSend(_to, _value);
+            if (_to != owner) {
                 //Forward to house address all change
-                (bool success, ) = owner.call{value: value, gas: safeGas}("");
+                (bool success, ) = owner.call{value: _value}("");
+
                 if (!success) {
-                    //if (!(owner.call{value: value, gas: safeGas}()))
-                    FailedSend(owner, value);
-                    //require(success, "Transfer to House failed.");
+                    FailedSend(owner, _value);
+                    require(success, "Failed to send Ether to owner");
+                } else {
+                    require(sent, "Failed to send Ether to user");
                 }
             }
         }
     }
+
+    // function safeSend(address addr, uint256 value) private {
+    //     if (address(this).balance < value) {
+    //         emit ValueIsTooBig();
+    //         return;
+    //     }
+
+    //     //TODO keep a litle to send transactions
+
+    //     (bool success, ) = addr.call{value: value}("");
+    //     // (bool success, ) = addr.call{value: value, gas: safeGas}("");
+    //     require(success, "Transfer failed.");
+    //     if (!success) {
+    //         //if (!(addr.call{value: value, gas: safeGas}(""))) {
+    //         FailedSend(addr, value);
+    //         if (addr != owner) {
+    //             //Forward to house address all change
+    //             (bool success, ) = owner.call{value: value, gas: safeGas}("");
+    //             if (!success) {
+    //                 //if (!(owner.call{value: value, gas: safeGas}()))
+    //                 FailedSend(owner, value);
+    //                 //require(success, "Transfer to House failed.");
+    //             }
+    //         }
+    //     }
+    // }
 
     function addInvestorAtID(uint256 id) private {
         investorIDs[msg.sender] = id;
@@ -404,11 +500,14 @@ contract Game {
     }
 
     // SECTION II: BET & BET PROCESSING
-    //function() {
-    receive() external payable {
-        // bet(0);
-        bet();
-        //startedBankroll += msg.value;
+    // Function to receive Ether. msg.data must be empty
+    receive() external payable {}
+
+    // Fallback function is called when msg.data is not empty
+    fallback() external payable {}
+
+    function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
     }
 
     function bet()
@@ -428,7 +527,7 @@ contract Game {
             divest(investors[smallestInvestorID].investorAddress);
         }
 
-        numInvestors++;
+        numInvestors += 1;
         addInvestorAtID(numInvestors);
         // END NEWINVESTOR
 
@@ -438,17 +537,30 @@ contract Game {
         //     (((betValue * ((10000 - edge) - pwin)) / pwin) <=
         //         (maxWin * getBankroll()) / 10000)
         // ) {
-        uint256 numerator = ((betValue * ((10000 - edge) - pwin)) / pwin);
-        uint256 denominator = (maxWin * getBankroll()) / 10000;
-        if (numerator <= denominator) {
+        // uint256 numerator = ((betValue * ((10000 - edge) - pwin)) / pwin);
+        // uint256 denominator = (maxWin * getBankroll()) / 10000;
+        // if (numerator <= denominator) {
+        if (
+            (((betValue * ((10000 - edge) - pwin)) / pwin) <=
+                (maxWin * getBankroll()) / 10000) && (betValue >= minBet)
+        ) {
             // byte[] memory myid = randbytes(10);
             uint256 numberRolled = _rand();
             uint256 myid = _rand();
 
             // uint256 myid = _randBytes(numberRolled);
 
-            bets[myid] = Bet(msg.sender, betValue, 0);
+            // bets[numInvestors] = Bet({
+            bets[myid] = Bet({
+                playerAddress: msg.sender,
+                amountBetted: betValue,
+                numberRolled: 0,
+                isClaimed: false,
+                isWinned: false
+            });
+            // betsKeys.push(numInvestors);
             betsKeys.push(myid);
+            betsIDs[msg.sender] = myid;
 
             emit DiceRolled(myid, msg.sender);
 
@@ -462,40 +574,49 @@ contract Game {
         }
     }
 
-    function numerator(uint256 amount) public pure returns (uint256) {
+    function numerator(uint256 amount) public view returns (uint256) {
+        // return ((amount * ((10000 - edge) - pwin)) / pwin);
         return ((amount * ((10000 - edge) - pwin)) / pwin);
     }
 
     function denominator() public view returns (uint256) {
-        return (maxWin * getBankroll()) / 10000;
+        // return (maxWin * getBankroll()) / 10000;
+        return ((maxWin * getBankroll()) / 10000);
     }
 
-    function isWinningBet(Bet memory thisBet, uint256 numberRolled)
+    function isWinningBet(Bet storage thisBet, uint256 numberRolled)
         private
         onlyWinningBets(numberRolled)
     {
-        uint256 winAmount = (thisBet.amountBetted * (10000 - edge)) / pwin;
-        BetWon(thisBet.playerAddress, numberRolled, winAmount);
+        // require(false, "isWinningBet");
+
+        thisBet.isWinned = true;
+        // uint256 winAmount = (thisBet.amountBetted * (10000 - edge)) / pwin;
+        // BetWon(thisBet.playerAddress, numberRolled, winAmount);
 
         //TODO do not sent but update data to allow user to claim
-        safeSend(thisBet.playerAddress, winAmount);
-        investorsLoses += (winAmount - thisBet.amountBetted);
+        //safeSend(thisBet.playerAddress, winAmount);
+        // investorsLoses += (winAmount - thisBet.amountBetted);
     }
 
-    function isLosingBet(Bet memory thisBet, uint256 numberRolled)
+    function isLosingBet(Bet storage thisBet, uint256 numberRolled)
         private
         onlyLosingBets(numberRolled)
     {
-        BetLost(thisBet.playerAddress, numberRolled);
-        safeSend(thisBet.playerAddress, 1);
+        // require(false, "isLosingBet");
+
+        thisBet.isClaimed = true;
+        emit BetLost(thisBet.playerAddress, numberRolled);
+        //TODO do not sent but update data to allow user to claim
+        //safeSend(thisBet.playerAddress, 1);
         investorsProfit +=
             ((thisBet.amountBetted - 1) * (10000 - houseEdge)) /
             10000;
         uint256 houseProfit = ((thisBet.amountBetted - 1) * (houseEdge)) /
             10000;
 
-        //TODO do not sent but update data to allow user to claim
-        safeSend(owner, houseProfit);
+        //TODO remuburse initial Bankroll
+        safeSend(payable(owner), houseProfit);
     }
 
     //SECTION III: INVEST & DIVEST
@@ -543,8 +664,8 @@ contract Game {
         }
 
         numInvestors--;
-        safeSend(currentInvestor, amountToReturn);
-        safeSend(owner, divestFeeAmount);
+        safeSend(payable(currentInvestor), amountToReturn);
+        safeSend(payable(owner), divestFeeAmount);
     }
 
     function forceDivestOfAllInvestors() public payable onlyOwner rejectValue {
