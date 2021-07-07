@@ -23,6 +23,7 @@ contract GameCAKE {
     IBEP20 public cake;
     address public cakeChef;
 
+    uint256 MAX_INT = uint256(-1);
     //TODO add verification with this constant
     uint256 private constant ROLL_IN_PROGRESS = 42;
 
@@ -117,6 +118,7 @@ contract GameCAKE {
 
     function bet(uint256 _amount) public {
         require(!paused, "Contract is stopped"); // onlyIfNotStopped
+        // require(numInvestors < maxInvestors, "only if not full"); // onlyIfNotFull
         require(_amount > 0, "Only more than zero"); // onlyMoreThanZero
         require(_amount >= getMinInvestment(), "Only more than min investment"); // onlyMoreThanMinInvestment
         require(_amount >= minBet, "Only more than min bet"); // onlyMoreThanMinBet
@@ -129,10 +131,19 @@ contract GameCAKE {
         require(balance >= _amount, "not enought"); // onlyMoreThanZero
 
         //TODO how to divest smallest investors ?
-        // if (numInvestors == maxInvestors) {
-        //     uint256 smallestInvestorID = searchSmallestInvestor();
-        //     divest(investors[smallestInvestorID].investorAddress);
-        // }
+        if (numInvestors == maxInvestors) {
+            uint256 smallestInvestorID = getNextTimelockInvestorId();
+            // uint256 smallestInvestorID = searchSmallestInvestor();
+
+            if (smallestInvestorID != MAX_INT) {
+                _divest(investors[smallestInvestorID].investorAddress);
+            } else {
+                require(
+                    numInvestors < maxInvestors,
+                    "game is full. you havec to wait to next timelock"
+                ); // onlyIfNotFull
+            }
+        }
 
         require(
             (((_amount * ((10000 - edge) - pwin)) / pwin) <=
@@ -492,6 +503,50 @@ contract GameCAKE {
         }
 
         return investorID;
+    }
+
+    function getNextTimelockInvestorId() internal view returns (uint256) {
+        uint256 nextTimelock = block.timestamp;
+        uint256 investorID = MAX_INT;
+
+        for (uint256 i = 1; i <= numInvestors; i++) {
+            if (
+                bets[betsIDs[investors[i].investorAddress]].timelock <=
+                nextTimelock
+            ) {
+                nextTimelock = bets[betsIDs[investors[i].investorAddress]]
+                .timelock;
+                investorID = i;
+            }
+        }
+
+        return investorID;
+        // for (uint256 i = 1; i <= numInvestors; i++) {
+        //     if (
+        //         block.timestamp >=
+        //         bets[betsIDs[investors[i].investorAddress]].timelock
+        //     ) {
+        //         // bets[betsIDs[investors[i].investorAddress]].amountBetted
+        //         investorID = i;
+        //     }
+        // }
+
+        // return investorID;
+    }
+
+    function getNextTimelock() internal view returns (uint256) {
+        uint256 nextTimelock = block.timestamp;
+        for (uint256 i = 1; i <= numInvestors; i++) {
+            if (
+                bets[betsIDs[investors[i].investorAddress]].timelock <=
+                nextTimelock
+            ) {
+                nextTimelock = bets[betsIDs[investors[i].investorAddress]]
+                .timelock;
+            }
+        }
+
+        return nextTimelock;
     }
 
     ///
