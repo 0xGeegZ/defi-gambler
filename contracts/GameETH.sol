@@ -12,6 +12,7 @@ contract GameETH {
     uint256 public maxInvestors = 10; //maximum number of investors
     uint256 public houseEdge = 90; //edge percentage (10000 = 100%)
     uint256 public divestFee = 50; //divest fee percentage (10000 = 100%)
+
     uint256 public emergencyWithdrawalRatio = 10; //ratio percentage (100 = 100%)
 
     uint256 private safeGas = 25000;

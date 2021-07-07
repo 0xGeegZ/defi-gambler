@@ -35,17 +35,17 @@ contract GameCAKE {
     uint256 public houseEdge = 90; //edge percentage (10000 = 100%)
     uint256 public divestFee = 50; //divest fee percentage (10000 = 100%)
     uint256 public emergencyWithdrawalRatio = 10; //ratio percentage (100 = 100%)
-    uint256 public startedBankroll = 10 ether; //10 Cake
 
     uint256 private safeGas = 25000;
     uint256 private constant INVALID_BET_MARKER = 99999;
     uint256 public constant EMERGENCY_TIMEOUT = 7 days;
 
-    uint256 public minTimeToWithdraw = 1 hours; // 604800 = 1 week
+    uint256 public minTimeToWithdraw = 10 days; // 604800 = 1 week
 
     uint256 public invested = 0; //currently invested
     uint256 public amountTotal = 0; //total invested
     uint256 public houseProfit = 0;
+    uint256 public startedBankroll = 10 ether; //10 Cake
 
     address public owner;
     bool public paused;
@@ -64,6 +64,9 @@ contract GameCAKE {
         bool isWinned;
         bool isClaimed;
         uint256 timelock;
+        // uint256 from;
+        // uint256 to;
+        // uint256 bonus;
     }
 
     //Starting at 1
@@ -163,6 +166,24 @@ contract GameCAKE {
         // uint256 myid = _randBytes(numberRolled);
 
         // bets[numInvestors] = Bet({
+
+        //TODO use to to determinate best end timelock to get multiplier
+        uint256 bonus = CakeChef(cakeChef).getMultiplier(
+            block.number,
+            (block.number + minTimeToWithdraw)
+        );
+
+        // CakeChef(cakeChef).poolInfo(0)
+        //          address lpToken,
+        //             uint256 allocPoint,
+        //             uint256 lastRewardBlock,
+        //             uint256 accCakePerShare
+
+        // uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
+        // uint256 cakeReward = multiplier.mul(cakePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        // cake.mint(devaddr, cakeReward.div(10));
+        // cake.mint(address(syrup), cakeReward);
+
         bets[myid] = Bet({
             playerAddress: msg.sender,
             amountBetted: _amount,
@@ -172,6 +193,9 @@ contract GameCAKE {
             isWinned: false,
             timelock: block.timestamp + minTimeToWithdraw
         });
+        //from: block.number,
+        // to: _amount.mul(bonus),
+        // bonus: bonus
 
         betsIDs[msg.sender] = myid;
         bets[myid].numberRolled = numberRolled;
@@ -201,7 +225,8 @@ contract GameCAKE {
             bets[myid].isClaimed = true;
 
             //TODO House Profit seems to be on erro
-            houseProfit += ((bets[myid].amountBetted) * (houseEdge)) / 10000;
+            houseProfit += ((bets[myid].amountBetted) * (houseEdge));
+            // houseProfit += ((bets[myid].amountBetted) * (houseEdge)) / 10000;
             //TODO remuburse initial Bankroll
 
             emit BetLost(bets[myid].playerAddress, bets[myid].numberRolled);
@@ -258,6 +283,9 @@ contract GameCAKE {
                 .add(balanceOfPendingWant());
     }
 
+    ///
+    /// EMERGENCY
+    ///
     function forceDivestOfAllInvestors() public payable {
         require(paused, "Contract is not stopped"); // onlyIfNotStopped
         require(msg.sender == owner, "Only for owner"); //onlyOwner
@@ -284,6 +312,20 @@ contract GameCAKE {
         // send
         uint256 _want = cake.balanceOf(address(this));
         cake.safeTransfer(msg.sender, _want);
+    }
+
+    function remburseStartedBankroll() public {
+        require(msg.sender == owner, "Only for owner"); //onlyOwner
+        require(startedBankroll > 0, "all started bankroll refounded");
+        // require(houseProfit < startedBankroll, "not enought profits");
+
+        uint256 amount = houseProfit > startedBankroll
+            ? startedBankroll
+            : houseProfit;
+
+        startedBankroll -= amount;
+        CakeChef(cakeChef).leaveStaking(amount);
+        cake.safeTransfer(msg.sender, amount);
     }
 
     ///
@@ -362,7 +404,8 @@ contract GameCAKE {
             uint256,
             uint256,
             bool,
-            bool
+            bool,
+            uint256
         )
     {
         require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
@@ -375,8 +418,12 @@ contract GameCAKE {
             bets[betKey].numberRolled,
             bets[betKey].winAmount,
             bets[betKey].isClaimed,
-            bets[betKey].isWinned
+            bets[betKey].isWinned,
+            bets[betKey].timelock
         );
+        // bets[betKey].from,
+        // bets[betKey].to,
+        // bets[betKey].bonus
     }
 
     function getHouseProfit() public view returns (uint256) {

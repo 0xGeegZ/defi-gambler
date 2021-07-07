@@ -136,8 +136,14 @@ contract(
       numberRolled : ${getLastBet["2"]}
       winAmount : ${ethers.utils.formatEther(getLastBet["3"].toString())}
       isClaimed : ${getLastBet["4"]}
-      isWinned : ${getLastBet["5"]}`)
+      isWinned : ${getLastBet["5"]}
+      timelock : ${getLastBet["6"]} `)
+      // from : ${getLastBet["7"]}
+      // to :${ethers.utils.formatEther(getLastBet["8"].toString())}
+      // bonus : ${ethers.utils.formatEther(getLastBet["9"].toString())}
+      // bonus : ${getLastBet["9"]}
 
+      // to : ${getLastBet["8"]}
       //TODO manage loose case
       await this.game.claimBonus({ from: alice })
       balanceAlice = await this.cake.balanceOf(alice)
@@ -147,9 +153,9 @@ contract(
       )
       console.log("advanceBlockTo - 1 minutes")
       //TODO create getter & setter for minTimeToWithdraw = 604800
-      await time.increase(60 * 60)
+      await time.increase(60 * 60 * 24 * 10)
 
-      //divest
+      //claimBet
       await this.game.claimBet({ from: alice })
       // divest = ethers.utils.formatEther(divest.toString())
       // console.log("🚀 divest amount - Alice", JSON.stringify(divest))
@@ -171,6 +177,7 @@ contract(
       getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
       console.log("🚀 get Contract Total Balance", getTotalBalance)
 
+      //TODO ERROR
       // let getHouseProfit = await this.game.getHouseProfit()
       // console.log(
       //   "🚀 get Contract Total Total Profit",
