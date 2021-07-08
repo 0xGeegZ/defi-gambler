@@ -39,7 +39,7 @@ contract GameCAKE {
 
     uint256 private safeGas = 25000;
     uint256 private constant INVALID_BET_MARKER = 99999;
-    uint256 public constant EMERGENCY_TIMEOUT = 7 days;
+    uint256 public constant EMERGENCY_TIMEOUT = 2 days;
 
     uint256 public minTimeToWithdraw = 10 days; // 604800 = 1 week
 
@@ -236,9 +236,9 @@ contract GameCAKE {
             bets[myid].isClaimed = true;
 
             //TODO House Profit seems to be on erro
-            houseProfit += ((bets[myid].amountBetted) * (houseEdge));
-            // houseProfit += ((bets[myid].amountBetted) * (houseEdge)) / 10000;
-            //TODO remuburse initial Bankroll
+            houseProfit += ((bets[myid].amountBetted) * (houseEdge)) / 10000;
+
+            //TODO IMPORTANT convert profit to BNB
 
             emit BetLost(bets[myid].playerAddress, bets[myid].numberRolled);
         }
@@ -374,6 +374,8 @@ contract GameCAKE {
 
         _leaveStaking(amountToReturn);
 
+        //TODO IMPORTANT convert profit to BNB
+
         delete bets[betKey];
         delete betsIDs[msg.sender];
 
@@ -435,6 +437,34 @@ contract GameCAKE {
         // bets[betKey].from,
         // bets[betKey].to,
         // bets[betKey].bonus
+    }
+
+    function getStatus()
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        uint256 bankroll = getTotalBalance();
+        uint256 minInvestment = getMinInvestment();
+        return (
+            bankroll,
+            pwin,
+            edge,
+            maxWin,
+            minBet,
+            houseProfit,
+            minInvestment,
+            numInvestors
+        );
     }
 
     function getHouseProfit() public view returns (uint256) {
