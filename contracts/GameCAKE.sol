@@ -39,9 +39,9 @@ contract GameCAKE {
 
     uint256 private safeGas = 25000;
     uint256 private constant INVALID_BET_MARKER = 99999;
-    uint256 public constant EMERGENCY_TIMEOUT = 2 days;
+    uint256 public constant EMERGENCY_TIMEOUT = 7 days;
 
-    uint256 public minTimeToWithdraw = 10 days; // 604800 = 1 week
+    uint256 public minTimeToWithdraw = 2 days; // 604800 = 1 week
 
     uint256 public invested = 0; //currently invested
     uint256 public amountTotal = 0; //total invested
@@ -235,8 +235,16 @@ contract GameCAKE {
             //Loosing
             bets[myid].isClaimed = true;
 
-            //TODO House Profit seems to be on erro
-            houseProfit += ((bets[myid].amountBetted) * (houseEdge)) / 10000;
+            //TODO House Profit seems to be on error on house Edge value
+            // houseProfit += ((bets[myid].amountBetted) * (houseEdge)) / 10000;
+            // houseProfit += bets[myid].winAmount;
+
+            uint256 investorsStack = ((bets[myid].amountBetted) *
+                (10000 - houseEdge)) / 10000;
+
+            houseProfit +=
+                (bets[myid].amountBetted - investorsStack) +
+                bets[myid].winAmount; //changed based on audit feedback
 
             //TODO IMPORTANT convert profit to BNB
 
@@ -252,8 +260,6 @@ contract GameCAKE {
 
         require(bets[betKey].isWinned, "Not winned.");
         require(!bets[betKey].isClaimed, "Already claimed.");
-
-        houseProfit -= bets[betKey].winAmount;
 
         _leaveStaking(bets[betKey].winAmount);
 
@@ -297,10 +303,10 @@ contract GameCAKE {
     ///
     /// EMERGENCY
     ///
-    function forceDivestOfAllInvestors() public payable {
+    function forceDivestOfAllInvestors() public {
         require(paused, "Contract is not stopped"); // onlyIfNotStopped
         require(msg.sender == owner, "Only for owner"); //onlyOwner
-        require(msg.value != 0, "reject value"); //rejectValue
+        // require(msg.value != 0, "reject value"); //rejectValue
 
         uint256 copyNumInvestors = numInvestors;
         for (uint256 i = 1; i <= copyNumInvestors; i++) {
@@ -339,6 +345,17 @@ contract GameCAKE {
         cake.safeTransfer(msg.sender, amount);
     }
 
+    function pause() public {
+        require(msg.sender == owner, "Only for owner"); //onlyOwner
+
+        paused = true;
+    }
+
+    function unpause() public {
+        require(msg.sender == owner, "Only for owner"); //onlyOwner
+        paused = false;
+    }
+
     ///
     /// PRIVATES FUNCTIONS
     ///
@@ -371,6 +388,9 @@ contract GameCAKE {
         invested -= amountToReturn;
         uint256 divestFeeAmount = (amountToReturn * divestFee) / 10000;
         amountToReturn -= divestFeeAmount;
+
+        //updating house profit
+        houseProfit += divestFeeAmount;
 
         _leaveStaking(amountToReturn);
 
@@ -475,12 +495,13 @@ contract GameCAKE {
         return invested;
     }
 
+    //TODO add internal function without restriction and external one with only investors restriction
     function getBalanceFor(address currentInvestor)
         public
         view
         returns (uint256)
     {
-        require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
+        // require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
 
         return bets[betsIDs[currentInvestor]].amountBetted;
         // return investors[investorIDs[currentInvestor]].amountInvested;
