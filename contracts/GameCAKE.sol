@@ -39,9 +39,8 @@ contract GameCAKE {
 
     uint256 private safeGas = 25000;
     uint256 private constant INVALID_BET_MARKER = 99999;
-    uint256 public constant EMERGENCY_TIMEOUT = 7 days;
 
-    uint256 public minTimeToWithdraw = 2 days; // 604800 = 1 week
+    uint256 public minTimeToWithdraw = 1 days; // 604800 = 1 week
 
     uint256 public invested = 0; //currently invested
     uint256 public amountTotal = 0; //total invested
@@ -136,7 +135,7 @@ contract GameCAKE {
             // uint256 smallestInvestorID = searchSmallestInvestor();
 
             if (smallestInvestorID != MAX_INT) {
-                _divest(investors[smallestInvestorID].investorAddress);
+                _divest(investors[smallestInvestorID].investorAddress, true);
             } else {
                 require(
                     numInvestors < maxInvestors,
@@ -183,6 +182,9 @@ contract GameCAKE {
             block.number,
             (block.number + minTimeToWithdraw)
         );
+
+        // TODO calculate pool API with something like function getPoolApr
+        // https://github.com/pancakeswap/pancake-frontend/blob/6c81f4f2df84d42c6f3e30c1d894799e73ee6dee/src/utils/apr.ts#L13
 
         // CakeChef(cakeChef).poolInfo(0)
         //          address lpToken,
@@ -278,7 +280,7 @@ contract GameCAKE {
             "Timelock: release time is before current time"
         );
 
-        _divest(msg.sender);
+        _divest(msg.sender, true);
 
         uint256 _want = cake.balanceOf(address(this));
         if (_want > 0) {
@@ -310,7 +312,7 @@ contract GameCAKE {
 
         uint256 copyNumInvestors = numInvestors;
         for (uint256 i = 1; i <= copyNumInvestors; i++) {
-            _divest(investors[i].investorAddress);
+            _divest(investors[i].investorAddress, false);
         }
     }
 
@@ -375,7 +377,7 @@ contract GameCAKE {
         cake.safeTransfer(msg.sender, _amount);
     }
 
-    function _divest(address currentInvestor) internal {
+    function _divest(address currentInvestor, bool isReorder) internal {
         require(
             getBalanceFor(currentInvestor) >= 0,
             "only if investor balance is positive"
@@ -386,6 +388,7 @@ contract GameCAKE {
 
         uint256 amountToReturn = getBalanceFor(currentInvestor);
         invested -= amountToReturn;
+
         uint256 divestFeeAmount = (amountToReturn * divestFee) / 10000;
         amountToReturn -= divestFeeAmount;
 
@@ -402,7 +405,8 @@ contract GameCAKE {
         delete investors[currentID];
         delete investorIDs[currentInvestor];
         //Reorder investors
-        if (currentID != numInvestors) {
+        if (currentID != numInvestors && isReorder) {
+            // if (currentID != numInvestors) {
             // Get last investor
             Investor memory lastInvestor = investors[numInvestors];
             //Set last investor ID to investorID of divesting account
@@ -493,6 +497,14 @@ contract GameCAKE {
 
     function getInvested() public view returns (uint256) {
         return invested;
+    }
+
+    function getInvestors() public view returns (uint256) {
+        return numInvestors;
+    }
+
+    function getAmountTotal() public view returns (uint256) {
+        return amountTotal;
     }
 
     //TODO add internal function without restriction and external one with only investors restriction
@@ -615,6 +627,9 @@ contract GameCAKE {
     ///
     /// RANDOM FUNCTIONS
     ///
+
+    // TODO add this contract to more faire random
+    // https://github.com/pooltogether/uniform-random-number/blob/master/contracts/UniformRandomNumber.sol
 
     /**
      * @dev Generate array of random bytes
