@@ -22,10 +22,10 @@ module.exports = {
   solidity: {
     version: "0.6.12",
     settings: {
-      // optimizer: {
-      //   enabled: true,
-      //   runs: 200
-      // }
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
     }
   },
 
@@ -51,6 +51,6 @@ module.exports = {
     artifacts: "./artifacts"
   },
   mocha: {
-    timeout: 60 * 60 * 10
+    timeout: 60 * 60 * 60 * 5
   }
 }

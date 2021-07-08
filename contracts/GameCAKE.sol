@@ -4,7 +4,8 @@ import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 
-import "./interfaces/ICakeChef.sol";
+// import "./interfaces/ICakeChef.sol";
+import "./pancake/MasterChef.sol";
 
 contract GameCAKE {
     //TODO Looks to work on all EVM chains with ERC20 standard (not necessarly true with BEP20)
@@ -117,10 +118,22 @@ contract GameCAKE {
 
     function bet(uint256 _amount) public {
         require(!paused, "Contract is stopped"); // onlyIfNotStopped
+
+        uint256 size;
+        address addr = msg.sender;
+        assembly {
+            size := extcodesize(addr)
+        }
+        require(size == 0, "No contract allowed"); // onlyHumans
+
         // require(numInvestors < maxInvestors, "only if not full"); // onlyIfNotFull
+
         require(_amount > 0, "Only more than zero"); // onlyMoreThanZero
+
         require(_amount >= getMinInvestment(), "Only more than min investment"); // onlyMoreThanMinInvestment
+
         require(_amount >= minBet, "Only more than min bet"); // onlyMoreThanMinBet
+
         require(investorIDs[msg.sender] == 0, "Only for not investors"); // onlyNotInvestors
 
         uint256 allowance = cake.allowance(msg.sender, address(this));
@@ -178,15 +191,15 @@ contract GameCAKE {
         // bets[numInvestors] = Bet({
 
         //TODO use to to determinate best end timelock to get multiplier
-        uint256 bonus = CakeChef(cakeChef).getMultiplier(
-            block.number,
-            (block.number + minTimeToWithdraw)
-        );
+        // uint256 bonus = MasterChef(cakeChef).getMultiplier(
+        //     block.number,
+        //     (block.number + minTimeToWithdraw)
+        // );
 
         // TODO calculate pool API with something like function getPoolApr
         // https://github.com/pancakeswap/pancake-frontend/blob/6c81f4f2df84d42c6f3e30c1d894799e73ee6dee/src/utils/apr.ts#L13
 
-        // CakeChef(cakeChef).poolInfo(0)
+        // MasterChef(cakeChef).poolInfo(0)
         //          address lpToken,
         //             uint256 allocPoint,
         //             uint256 lastRewardBlock,
@@ -256,6 +269,14 @@ contract GameCAKE {
 
     function claimBonus() public {
         require(!paused, "Contract is stopped"); // onlyIfNotStopped
+
+        uint256 size;
+        address addr = msg.sender;
+        assembly {
+            size := extcodesize(addr)
+        }
+        require(size == 0, "No contract allowed"); // onlyHumans
+
         require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
 
         uint256 betKey = betsIDs[msg.sender];
@@ -274,7 +295,16 @@ contract GameCAKE {
 
     function claimBet() public {
         require(!paused, "Contract is stopped"); // onlyIfNotStopped
+
+        uint256 size;
+        address addr = msg.sender;
+        assembly {
+            size := extcodesize(addr)
+        }
+        require(size == 0, "No contract allowed"); // onlyHumans
+
         require(investorIDs[msg.sender] != 0, "Only for investors"); // onlyInvestors
+
         require(
             block.timestamp >= bets[betsIDs[msg.sender]].timelock,
             "Timelock: release time is before current time"
@@ -339,7 +369,7 @@ contract GameCAKE {
         //unstake other for Owner
         uint256 balanceOfStakedWant = balanceOfStakedWant();
         // unstacking
-        CakeChef(cakeChef).leaveStaking(balanceOfStakedWant);
+        MasterChef(cakeChef).leaveStaking(balanceOfStakedWant);
     }
 
     function emergencyWithdrawal() public {
@@ -368,7 +398,7 @@ contract GameCAKE {
             : houseProfit;
 
         startedBankroll -= amount;
-        CakeChef(cakeChef).leaveStaking(amount);
+        MasterChef(cakeChef).leaveStaking(amount);
         cake.safeTransfer(msg.sender, amount);
     }
 
@@ -392,12 +422,12 @@ contract GameCAKE {
         uint256 _want = cake.balanceOf(address(this));
         cake.safeApprove(cakeChef, 0);
         cake.safeApprove(cakeChef, _want);
-        CakeChef(cakeChef).enterStaking(_want);
+        MasterChef(cakeChef).enterStaking(_want);
     }
 
     function _leaveStaking(uint256 _amount) internal {
         // unstacking
-        CakeChef(cakeChef).leaveStaking(_amount);
+        MasterChef(cakeChef).leaveStaking(_amount);
         // send
         cake.safeTransfer(msg.sender, _amount);
     }
@@ -564,7 +594,7 @@ contract GameCAKE {
     function balanceOfStakedWant() internal view returns (uint256) {
         // require(msg.sender == owner, "Only for owner");
 
-        (uint256 _amount, ) = CakeChef(cakeChef).userInfo(
+        (uint256 _amount, ) = MasterChef(cakeChef).userInfo(
             uint256(0),
             address(this)
         );
@@ -572,7 +602,7 @@ contract GameCAKE {
     }
 
     function balanceOfPendingWant() internal view returns (uint256) {
-        return CakeChef(cakeChef).pendingCake(uint256(0), address(this));
+        return MasterChef(cakeChef).pendingCake(uint256(0), address(this));
     }
 
     function getContractBalance() internal view returns (uint256) {
