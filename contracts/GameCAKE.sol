@@ -661,14 +661,14 @@ contract GameCAKE {
      * @return _ret bytes32 a random string
      * @notice Actually cause a out of Gas exception
      */
-    function _randBytes() internal view returns (bytes32 _ret) {
-        uint256 num = _rand();
-        assembly {
-            _ret := mload(0x10)
-            mstore(_ret, 0x20)
-            mstore(add(_ret, 0x20), num)
-        }
-    }
+    // function _randBytes() internal view returns (bytes32 _ret) {
+    //     uint256 num = _rand();
+    //     assembly {
+    //         _ret := mload(0x10)
+    //         mstore(_ret, 0x20)
+    //         mstore(add(_ret, 0x20), num)
+    //     }
+    // }
 
     /**
      * @dev Generate array of random bytes
@@ -676,13 +676,13 @@ contract GameCAKE {
      * @return _ret bytes32 the transformed string
      * @notice Actually cause a out of Gas exception
      */
-    function _randBytes(uint256 _rand) internal pure returns (bytes32 _ret) {
-        assembly {
-            _ret := mload(0x10)
-            mstore(_ret, 0x20)
-            mstore(add(_ret, 0x20), _rand)
-        }
-    }
+    // function _randBytes(uint256 _rand) internal pure returns (bytes32 _ret) {
+    //     assembly {
+    //         _ret := mload(0x10)
+    //         mstore(_ret, 0x20)
+    //         mstore(add(_ret, 0x20), _rand)
+    //     }
+    // }
 
     /**
      * @dev Generate array of random bytes

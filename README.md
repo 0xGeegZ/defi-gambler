@@ -1,3 +1,20 @@
+# Current Working Branch : POC
+
+Working FIles :
+contracts/GameCAKE.sol
+test/GameCAKE.test.js
+
+# HOW TO USE IT
+
+1. Install Dépendencies
+   yarn install
+
+2. Launch Test
+   yarn test
+
+3. Check Coverage
+   yarn coverage
+
 # Auto Farm - AutoCake Wault
 
 StratX2 : https://github.com/autofarmnetwork/AutofarmV2_CrossChain/blob/master/StratX2.sol
