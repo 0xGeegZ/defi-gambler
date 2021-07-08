@@ -302,6 +302,24 @@ contract GameCAKE {
                 .add(balanceOfPendingWant());
     }
 
+    function getTotalBalanceDetails()
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        require(msg.sender == owner, "Only for owner"); //onlyOwner
+
+        uint256 contractBalance = getContractBalance();
+        uint256 balanceOfStakedWant = balanceOfStakedWant();
+        uint256 balanceOfPendingWant = balanceOfPendingWant();
+
+        return (contractBalance, balanceOfStakedWant, balanceOfPendingWant);
+    }
+
     ///
     /// EMERGENCY
     ///
@@ -316,6 +334,14 @@ contract GameCAKE {
         }
     }
 
+    function unstakeAll() public {
+        require(msg.sender == owner, "Only for owner"); //onlyOwner
+        //unstake other for Owner
+        uint256 balanceOfStakedWant = balanceOfStakedWant();
+        // unstacking
+        CakeChef(cakeChef).leaveStaking(balanceOfStakedWant);
+    }
+
     function emergencyWithdrawal() public payable {
         // require(paused, "Contract is not stopped"); // onlyIfNotStopped
         require(msg.sender == owner, "Only for owner"); //onlyOwner
@@ -324,10 +350,8 @@ contract GameCAKE {
         // get money back to players
         forceDivestOfAllInvestors();
 
-        //unstake other for Owner
-        uint256 balanceOfStakedWant = balanceOfStakedWant();
-        // unstacking
-        CakeChef(cakeChef).leaveStaking(balanceOfStakedWant);
+        //unstake all
+        unstakeAll();
         // send
         uint256 _want = cake.balanceOf(address(this));
         cake.safeTransfer(msg.sender, _want);

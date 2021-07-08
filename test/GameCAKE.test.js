@@ -6,6 +6,7 @@ const { assert } = require("chai")
 const CakeToken = artifacts.require("CakeToken")
 const SyrupBar = artifacts.require("SyrupBar")
 const MasterChef = artifacts.require("MasterChef")
+// const SousChef = artifacts.require("SousChef")
 const GameCAKE = artifacts.require("GameCAKE")
 
 const MAX_INVESTORS = 10
@@ -14,6 +15,10 @@ contract("Game", ([dev, minter, ...players]) => {
   beforeEach(async () => {
     this.cake = await CakeToken.new({ from: minter })
     this.syrup = await SyrupBar.new(this.cake.address, { from: minter })
+
+    // this.SousChef = await SousChef.new(this.syrup.address, "40", "100", "500", {
+    //   from: minter
+    // })
 
     this.chef = await MasterChef.new(
       this.cake.address,
@@ -216,6 +221,9 @@ contract("Game", ([dev, minter, ...players]) => {
         // console.log("🚀 [AFTER DIVEST] getInvestors", getInvestors.toString())
 
         i = 0
+
+        //TMP
+        // break
       }
 
       player = players[i]
@@ -240,7 +248,7 @@ contract("Game", ([dev, minter, ...players]) => {
       } else looses++
 
       console.log(
-        `🚀 ${getLastBet["5"] ? "winned" : "loosed"} game for player ${counter}`
+        `${getLastBet["5"] ? "winned" : "loosed"} game for player ${counter}`
       )
 
       counter++
@@ -249,7 +257,7 @@ contract("Game", ([dev, minter, ...players]) => {
 
     console.log(`**********************************`)
     console.log(
-      `🚀 END : iterations : ${counter} - win ratio ${wins} - loose ratio ${looses}`
+      `END : iterations : ${counter} - win ratio ${wins} - loose ratio ${looses}`
     )
     console.log(`**********************************`)
 
@@ -267,12 +275,34 @@ contract("Game", ([dev, minter, ...players]) => {
     // let getTotalBalance = await this.game.getTotalBalance()
     getTotalBalance = await this.game.getTotalBalance()
     getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
-    console.log("🚀 get Contract Total Balance", getTotalBalance)
+    // console.log("🚀 get Contract Total Balance", getTotalBalance)
+
+    // await this.game.unstakeAll({
+    //   from: minter
+    // })
+    let getTotalBalanceDetails = await this.game.getTotalBalanceDetails({
+      from: minter
+    })
+
+    console.log("🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀")
+    console.log(`🚀 Get Contract Total Total Balance Detailed : 
+    TOTAL : ${getTotalBalance}
+    DETAILS : 
+     contractBalance : ${ethers.utils.formatEther(
+       getTotalBalanceDetails["0"].toString()
+     )}
+     balanceOfStakedWant : ${ethers.utils.formatEther(
+       getTotalBalanceDetails["1"].toString()
+     )}
+     balanceOfPendingWant : ${ethers.utils.formatEther(
+       getTotalBalanceDetails["2"].toString()
+     )}`)
 
     // let getHouseProfit = await this.game.getHouseProfit()
     getHouseProfit = await this.game.getHouseProfit()
     getHouseProfit = ethers.utils.formatEther(getHouseProfit.toString())
-    console.log("🚀 get Contract Total Total Profit", getHouseProfit)
+    console.log("🚀 Get Contract Total Total Profit", getHouseProfit)
+    console.log("🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀")
   })
 
   // it("should enter until loose game", async () => {
