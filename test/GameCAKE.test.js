@@ -10,6 +10,10 @@ const MasterChef = artifacts.require("MasterChef")
 const GameCAKE = artifacts.require("GameCAKE")
 
 const MAX_INVESTORS = 10
+const ACCEPTED_MARGIN = 3
+const PERCENT_WIN_DECIMALS = 90 / 100
+const PERCENT_LOOSE_DECIMALS = 10 / 100
+const MIN_TIME_TO_WITHDRAW = 60 * 60 * 60 * 24
 
 contract("Game", ([dev, minter, ...players]) => {
   beforeEach(async () => {
@@ -46,167 +50,45 @@ contract("Game", ([dev, minter, ...players]) => {
     await this.syrup.transferOwnership(this.chef.address, { from: minter })
   })
 
-  // it("LOG BASE", async () => {
-  //   const alice = players[0]
-  //   // **********
-  //   // LOG BASE
-  //   // **********
-  //   let balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log(
-  //     "🚀 starting balance - Alice",
-  //     ethers.utils.formatEther(balanceAlice.toString())
-  //   )
-
-  //   // token.increaseAllowance(receiver.address, 1000)
-  //   // await this.cake.approve(this.chef.address, "100", { from: alice })
-
-  //   await this.cake.approve(this.game.address, ethers.utils.parseEther("1"), {
-  //     from: alice
-  //   })
-
-  //   value = ethers.utils.parseUnits("1", 18)
-
-  //   let numerator = await this.game.numerator(value)
-  //   numerator = ethers.utils.formatEther(numerator.toString())
-
-  //   let denominator = await this.game.denominator()
-  //   denominator = ethers.utils.formatEther(denominator.toString())
-
-  //   let getInvested = await this.game.getInvested()
-  //   getInvested = ethers.utils.formatEther(getInvested.toString())
-
-  //   let getTotalBalance = await this.game.getTotalBalance()
-  //   getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
-
-  //   let balanceSirup = await this.syrup.balanceOf(this.game.address)
-  //   balanceSirup = ethers.utils.formatEther(balanceSirup.toString())
-
-  //   let balanceCake = await this.cake.balanceOf(this.game.address)
-  //   balanceCake = ethers.utils.formatEther(balanceCake.toString())
-
-  //   console.log("===============================")
-  //   console.log("🚀 get Contract Invested", getInvested)
-  //   console.log("🚀 get Contract Total Balance", getTotalBalance)
-  //   console.log("🚀 get Contract Syrup Balance", balanceSirup.toString())
-  //   console.log("🚀 get Contract Cake Balance", balanceCake.toString())
-
-  //   console.log(`${numerator} <= ${denominator} : ${numerator <= denominator}`)
-  //   console.log("===============================")
-
-  //   console.log("🚀 betting 1 Cakes ")
-
-  //   await this.game.bet(value, {
-  //     from: alice
-  //   })
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log(
-  //     "🚀 balance - Alice",
-  //     ethers.utils.formatEther(balanceAlice.toString())
-  //   )
-
-  //   getInvested = await this.game.getInvested()
-  //   getInvested = ethers.utils.formatEther(getInvested.toString())
-
-  //   getTotalBalance = await this.game.getTotalBalance()
-  //   getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
-
-  //   balanceSirup = await this.syrup.balanceOf(this.game.address)
-  //   balanceSirup = ethers.utils.formatEther(balanceSirup.toString())
-
-  //   balanceCake = await this.cake.balanceOf(this.game.address)
-  //   balanceCake = ethers.utils.formatEther(balanceCake.toString())
-
-  //   console.log("===============================")
-  //   console.log("🚀 get Contract Invested", getInvested)
-  //   console.log("🚀 get Contract Total Balance", getTotalBalance)
-  //   console.log("🚀 get Contract Syrup Balance", balanceSirup.toString())
-  //   console.log("🚀 get Contract Cake Balance", balanceCake.toString())
-  //   console.log("===============================")
-
-  //   const getLastBet = await this.game.getLastBet({ from: alice })
-  //   console.log(`🚀 getLastBet :
-  //   playerAddress : ${getLastBet["0"]}
-  //   amountBetted : ${getLastBet["1"]}
-  //   numberRolled : ${getLastBet["2"]}
-  //   winAmount : ${ethers.utils.formatEther(getLastBet["3"].toString())}
-  //   isClaimed : ${getLastBet["4"]}
-  //   isWinned : ${getLastBet["5"]}
-  //   timelock : ${getLastBet["6"]} `)
-  //   // from : ${getLastBet["7"]}
-  //   // to :${ethers.utils.formatEther(getLastBet["8"].toString())}
-  //   // bonus : ${ethers.utils.formatEther(getLastBet["9"].toString())}
-  //   // bonus : ${getLastBet["9"]}
-
-  //   // to : ${getLastBet["8"]}
-  //   //TODO manage loose case
-  //   await this.game.claimBonus({ from: alice })
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log(
-  //     "🚀 balance after claim winned amount - Alice",
-  //     ethers.utils.formatEther(balanceAlice.toString())
-  //   )
-  //   console.log("advanceBlockTo - 1 minutes")
-  //   //TODO create getter & setter for minTimeToWithdraw = 604800
-  //   await time.increase(60 * 60 * 24 * 10)
-
-  //   //claimBet
-  //   await this.game.claimBet({ from: alice })
-  //   // divest = ethers.utils.formatEther(divest.toString())
-  //   // console.log("🚀 divest amount - Alice", JSON.stringify(divest))
-
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   balanceAlice = ethers.utils.formatEther(balanceAlice.toString())
-
-  //   console.log("🚀 balance after unstacking bet amount - Alice", balanceAlice)
-
-  //   //check contract bankroll
-  //   getInvested = await this.game.getInvested()
-  //   getInvested = ethers.utils.formatEther(getInvested.toString())
-  //   console.log("🚀 get Contract Invested", getInvested)
-
-  //   getTotalBalance = await this.game.getTotalBalance()
-  //   getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
-  //   console.log("🚀 get Contract Total Balance", getTotalBalance)
-
-  //   //TODO ERROR
-  //   let getHouseProfit = await this.game.getHouseProfit()
-  //   console.log(
-  //     "🚀 get Contract Total Total Profit",
-  //     JSON.stringify(getHouseProfit)
-  //   )
-  //   getHouseProfit = ethers.utils.formatEther(getHouseProfit.toString())
-  //   console.log("🚀 get Contract Total Total Profit", getHouseProfit)
-
-  //   // **********
-  //   // ENDLOG BASE
-  //   // **********
-  // })
-
-  it("should enter 100 time in game and have coherent stats", async () => {
-    let value = ethers.utils.parseEther("1")
-
-    let player
-    let i
+  it("[OK] should win a game", async () => {
+    let isWinningBet = false
     let counter = 0
-    let wins = 0
-    let looses = 0
+    let value = ethers.utils.parseEther("1")
+    let player
+    while (!isWinningBet) {
+      player = players[counter]
+      counter++
+      await this.cake.approve(this.game.address, value, {
+        from: player
+      })
+
+      await this.game.bet(value, {
+        from: player
+      })
+
+      const getLastBet = await this.game.getLastBet({ from: player })
+      isWinningBet = getLastBet["5"]
+    }
+    assert(isWinningBet)
+  })
+
+  it("[OK] should loose a game", async () => {
+    const MAX_ITERATIONS = 50
+
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i, counter, wins, looses
+    looses = wins = counter = 0
+
     for (i = 0; i < players.length; i++) {
-      if (counter == 100) {
-        await this.game.pause({
-          from: minter
-        })
-        await this.game.forceDivestOfAllInvestors({
-          from: minter
-        })
-        await this.game.unpause({
-          from: minter
-        })
+      if (counter == MAX_ITERATIONS) {
+        await this.game.pause(minterParams)
+        await this.game.forceDivestOfAllInvestors(minterParams)
+        await this.game.unpause(minterParams)
         break
       }
 
       if (i == MAX_INVESTORS) {
-        // console.log(`**********************************`)
-        console.log(`divest all investors`)
         //pause and divest all players
         await this.game.pause({
           from: minter
@@ -218,536 +100,495 @@ contract("Game", ([dev, minter, ...players]) => {
           from: minter
         })
         getInvestors = await this.game.getInvestors()
-        // console.log("🚀 [AFTER DIVEST] getInvestors", getInvestors.toString())
-
         i = 0
-
-        //TMP
-        // break
       }
 
       player = players[i]
-      // console.log(`🚀 launching game for player ${i} : ${player}`)
+      let playerParams = { from: player }
 
-      await this.cake.approve(this.game.address, value, {
-        from: player
-      })
+      await this.cake.approve(this.game.address, value, playerParams)
 
-      await this.game.bet(value, {
-        from: player
-      })
+      await this.game.bet(value, playerParams)
 
-      const getLastBet = await this.game.getLastBet({ from: player })
+      const getLastBet = await this.game.getLastBet(playerParams)
 
-      if (getLastBet["5"]) {
-        await time.increase(60 * 60 * 24 * 1)
-
-        //claimBet
-        await this.game.claimBet({ from: player })
-        wins++
-      } else looses++
-
-      console.log(
-        `${getLastBet["5"] ? "winned" : "loosed"} game for player ${counter}`
-      )
+      if (!getLastBet["5"]) return assert(!getLastBet["5"])
 
       counter++
-      // if (!getLastBet[5]) break
     }
 
-    console.log(`**********************************`)
-    console.log(
-      `END : iterations : ${counter} - win ratio ${wins} - loose ratio ${looses}`
+    assert(
+      false,
+      `no players loosing during ${MAX_ITERATIONS} iteration with ${PERCENT_LOOSE_DECIMALS *
+        100}% chances to loose`
     )
-    console.log(`**********************************`)
-
-    //check contract bankroll
-    // let getInvested = await this.game.getInvested()
-    getInvested = await this.game.getInvested()
-    getInvested = ethers.utils.formatEther(getInvested.toString())
-    console.log("🚀 get Contract CURRENTLY Invested", getInvested)
-
-    // let getAmountTotal = await this.game.getAmountTotal()
-    getAmountTotal = await this.game.getAmountTotal()
-    getAmountTotal = ethers.utils.formatEther(getAmountTotal.toString())
-    console.log("🚀 get Contract TOTAL Invested", getAmountTotal)
-
-    // let getTotalBalance = await this.game.getTotalBalance()
-    getTotalBalance = await this.game.getTotalBalance()
-    getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
-    // console.log("🚀 get Contract Total Balance", getTotalBalance)
-
-    // await this.game.unstakeAll({
-    //   from: minter
-    // })
-    let getTotalBalanceDetails = await this.game.getTotalBalanceDetails({
-      from: minter
-    })
-
-    console.log("🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀")
-    console.log(`🚀 Get Contract Total Total Balance Detailed : 
-    TOTAL : ${getTotalBalance}
-    DETAILS : 
-     contractBalance : ${ethers.utils.formatEther(
-       getTotalBalanceDetails["0"].toString()
-     )}
-     balanceOfStakedWant : ${ethers.utils.formatEther(
-       getTotalBalanceDetails["1"].toString()
-     )}
-     balanceOfPendingWant : ${ethers.utils.formatEther(
-       getTotalBalanceDetails["2"].toString()
-     )}`)
-
-    // let getHouseProfit = await this.game.getHouseProfit()
-    getHouseProfit = await this.game.getHouseProfit()
-    getHouseProfit = ethers.utils.formatEther(getHouseProfit.toString())
-    console.log("🚀 Get Contract Total Total Profit", getHouseProfit)
-    console.log("🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀")
   })
 
-  // it("should enter until loose game", async () => {
-  //   let value = ethers.utils.parseEther("1")
-  //   // value = ethers.utils.parseUnits("1", 18)
-
-  //   let player
-  //   let i
-  //   for (i = 0; i < players.length; i++) {
-  //     if (i == MAX_INVESTORS) {
-  //       console.log(`**********************************`)
-  //       console.log(`divest all investors`)
-  //       console.log(`**********************************`)
-
-  //       //pause and divest all players
-  //       await this.game.pause({
-  //         from: minter
-  //       })
-  //       await this.game.forceDivestOfAllInvestors({
-  //         from: minter
-  //       })
-  //       await this.game.unpause({
-  //         from: minter
-  //       })
-  //       i = 0
-  //     }
-  //     player = players[i]
-  //     console.log(`🚀 launching game for player ${i} : ${player}`)
-
-  //     await this.cake.approve(this.game.address, value, {
-  //       from: player
-  //     })
-
-  //     await this.game.bet(value, {
-  //       from: player
-  //     })
-
-  //     const getLastBet = await this.game.getLastBet({ from: player })
-
-  //     console.log(`🚀 winned game for player ${i} : ${getLastBet["5"]}`)
-
-  //     if (!getLastBet[5]) break
-  //   }
-
-  //   console.log(`🚀 starting loosing Gamer for player ${i} - ${player} `)
-
-  //   const getLastBet = await this.game.getLastBet({ from: player })
-  //   console.log(`🚀 getLastBet :
-  //   playerAddress : ${getLastBet["0"]}
-  //   amountBetted : ${getLastBet["1"]}
-  //   numberRolled : ${getLastBet["2"]}
-  //   winAmount : ${ethers.utils.formatEther(getLastBet["3"].toString())}
-  //   isClaimed : ${getLastBet["4"]}
-  //   isWinned : ${getLastBet["5"]}
-  //   timelock : ${getLastBet["6"]} `)
-
-  //   console.log("advanceBlockTo - 1 minutes")
-  //   await time.increase(60 * 60 * 24 * 2)
-
-  //   //claimBet
-  //   await this.game.claimBet({ from: player })
-
-  //   let balancePlayer = await this.cake.balanceOf(player)
-  //   balancePlayer = ethers.utils.formatEther(balancePlayer.toString())
-  //   console.log(
-  //     "🚀 balance after unstacking bet amount - Player",
-  //     balancePlayer
-  //   )
-
-  //   //check contract bankroll
-  //   let getInvested = await this.game.getInvested()
-  //   getInvested = ethers.utils.formatEther(getInvested.toString())
-  //   console.log("🚀 get Contract Invested", getInvested)
-
-  //   let getTotalBalance = await this.game.getTotalBalance()
-  //   getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
-  //   console.log("🚀 get Contract Total Balance", getTotalBalance)
-
-  //   let getHouseProfit = await this.game.getHouseProfit()
-  //   getHouseProfit = ethers.utils.formatEther(getHouseProfit.toString())
-  //   console.log("🚀 get Contract Total Total Profit", getHouseProfit)
-  // })
-
-  // it("should divest pool if needed", async () => {
-  //   const MAX_INVESTORS = 10
-  //   let value = ethers.utils.parseEther("1")
-  //   // value = ethers.utils.parseUnits("1", 18)
-
-  //   let player
-  //   for (let i = 0; i < players.length; i++) {
-  //     if (i == MAX_INVESTORS) {
-  //       console.log("HOHOHOHOHO")
-  //       //todo divest all plaeyrs
-  //     }
-  //     player = players[i]
-  //     console.log(`🚀 launching game for player ${i} : ${player}`)
-
-  //     await this.cake.approve(this.game.address, value, {
-  //       from: player
-  //     })
-
-  //     await this.game.bet(value, {
-  //       from: player
-  //     })
-
-  //     const getLastBet = await this.game.getLastBet({ from: player })
-
-  //     console.log(`🚀 winned game for player ${i} : ${getLastBet["5"]}`)
-  //   }
-  //   // players.forEach(async player => {
-  //   //   console.log(
-  //   //     "🚀 ~ file: GameCAKE.test.js ~ line 74 ~ it ~ player",
-  //   //     player
-  //   //   )
-  //   //   await this.cake.approve(this.game.address, value, {
-  //   //     from: player
-  //   //   })
-
-  //   //   await this.game.bet(value, {
-  //   //     from: player
-  //   //   })
-
-  //   //   const getLastBet = await this.game.getLastBet({ from: player })
-
-  //   //   console.log(`🚀 winned game for player ${counter} : ${getLastBet["5"]}`)
-  //   // })
-  //   console.log(`🚀 starting winning Gamer for ${players.length} players`)
-
-  //   assert(true)
-  // })
-
-  // it("should enter multiples players until maxplayers", async () => {
-  //   const MAX_INVESTORS = 10
-  //   let value = ethers.utils.parseEther("1")
-  //   // value = ethers.utils.parseUnits("1", 18)
-
-  //   let player
-  //   for (let i = 0; i < players.length; i++) {
-  //     if (i == MAX_INVESTORS) {
-  //       console.log("HOHOHOHOHO")
-  //       //todo divest all plaeyrs
-  //     }
-  //     player = players[i]
-  //     console.log(`🚀 launching game for player ${i} : ${player}`)
-
-  //     await this.cake.approve(this.game.address, value, {
-  //       from: player
-  //     })
-
-  //     await this.game.bet(value, {
-  //       from: player
-  //     })
-
-  //     const getLastBet = await this.game.getLastBet({ from: player })
-
-  //     console.log(`🚀 winned game for player ${i} : ${getLastBet["5"]}`)
-  //   }
-
-  //   console.log(`🚀 starting winning Gamer for ${players.length} players`)
-
-  //   assert(true)
-  // })
-
-  // it("should wait for player win to launch", async () => {
-  //   const players = [
-  //     alice,
-  //     bob,
-  //     carol,
-  //     jean,
-  //     peter,
-  //     wiliam,
-  //     julie,
-  //     maurice,
-  //     francis,
-  //     elena,
-  //     miranda
-  //   ]
-  //   let isWinningBet = false
-  //   let counter = 0
-  //   let value = ethers.utils.parseUnits("1", 18)
-  //   let player
-  //   while (!isWinningBet) {
-  //     player = players[counter]
-  //     counter++
-  //     await this.cake.approve(this.game.address, value, {
-  //       from: player
-  //     })
-
-  //     await this.game.bet(value, {
-  //       from: player
-  //     })
-
-  //     const getLastBet = await this.game.getLastBet({ from: player })
-
-  //     console.log(`🚀 winned game for player ${counter} : ${getLastBet["5"]}`)
-
-  //     isWinningBet = getLastBet["5"]
-  //   }
-  //   console.log(`🚀 starting winning Gamer for player ${counter} : ${player}`)
-
-  //   assert(true)
-  // })
-
-  // it("should bet one cake and wait to claim back bet", async () => {
-  //   let balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log(
-  //     "🚀 starting balance - Alice",
-  //     ethers.utils.formatEther(balanceAlice.toString())
-  //   )
-
-  //   // token.increaseAllowance(receiver.address, 1000)
-  //   // await this.cake.approve(this.chef.address, "100", { from: alice })
-
-  //   await this.cake.approve(this.game.address, ethers.utils.parseEther("1"), {
-  //     from: alice
-  //   })
-
-  //   console.log("🚀 betting 1 Cakes ")
-
-  //   let value = ethers.utils.parseUnits("1", 18)
-
-  //   let numerator = await this.game.numerator(value)
-  //   numerator = ethers.utils.formatEther(numerator.toString())
-
-  //   let denominator = await this.game.denominator()
-  //   denominator = ethers.utils.formatEther(denominator.toString())
-
-  //   // let getInvested = await this.game.getInvested()
-  //   // getInvested = ethers.utils.formatEther(getInvested.toString())
-
-  //   let getTotalBalance = await this.game.getTotalBalance()
-  //   getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
-
-  //   console.log("===============================")
-  //   // console.log("🚀 get Contract Bankroll", getInvested)
-  //   console.log("🚀 get Contract Total Balance", getTotalBalance)
-  //   console.log(
-  //     `${numerator} <= ${denominator} : ${numerator <= denominator}`
-  //   )
-  //   console.log("===============================")
-
-  //   await this.game.bet(value, {
-  //     from: alice
-  //   })
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log(
-  //     "🚀 balance - Alice",
-  //     ethers.utils.formatEther(balanceAlice.toString())
-  //   )
-
-  //   const getLastBet = await this.game.getLastBet({ from: alice })
-  //   console.log(`🚀 getLastBet :
-  //   playerAddress : ${getLastBet["0"]}
-  //   amountBetted : ${getLastBet["1"]}
-  //   numberRolled : ${getLastBet["2"]}
-  //   winAmount : ${ethers.utils.formatEther(getLastBet["3"].toString())}
-  //   isClaimed : ${getLastBet["4"]}
-  //   isWinned : ${getLastBet["5"]}`)
-
-  //   //TODO manage loose case
-  //   await this.game.claimBonus({ from: alice })
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log(
-  //     "🚀 balance after claim winned amount - Alice",
-  //     ethers.utils.formatEther(balanceAlice.toString())
-  //   )
-  //   console.log("advanceBlockTo - 1 minutes")
-  //   //TODO create getter & setter for minTimeToWithdraw = 604800
-  //   await time.increase(60)
-
-  //   //divest
-  //   await this.game.claimBet({ from: alice })
-  //   // divest = ethers.utils.formatEther(divest.toString())
-  //   // console.log("🚀 divest amount - Alice", JSON.stringify(divest))
-
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   balanceAlice = ethers.utils.formatEther(balanceAlice.toString())
-
-  //   console.log(
-  //     "🚀 balance after unstacking bet amount - Alice",
-  //     balanceAlice
-  //   )
-
-  //   //check contract bankroll
-  //   // getInvested = await this.game.getInvested()
-  //   // getInvested = ethers.utils.formatEther(getInvested.toString())
-  //   // console.log("🚀 get Contract Bankroll", getInvested)
-
-  //   getTotalBalance = await this.game.getTotalBalance()
-  //   getTotalBalance = ethers.utils.formatEther(getTotalBalance.toString())
-  //   console.log("🚀 get Contract Total Balance", getTotalBalance)
-  // })
-
-  // it("SHould be locked by timelock", async () => {
-  //   //TODO add try catch
-  //   let balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log(
-  //     "🚀 starting balance - Alice",
-  //     ethers.utils.formatEther(balanceAlice.toString())
-  //   )
-
-  //   await this.cake.approve(
-  //     this.game.address,
-  //     ethers.utils.parseEther("10"),
-  //     { from: alice }
-  //   )
-
-  //   console.log("🚀 betting 10 Cakes ")
-
-  //   let value = ethers.utils.parseUnits("1", 18)
-
-  //   let numerator = await this.game.numerator(value)
-  //   numerator = ethers.utils.formatEther(numerator.toString())
-
-  //   let denominator = await this.game.denominator()
-  //   denominator = ethers.utils.formatEther(denominator.toString())
-
-  //   let getInvested = await this.game.getInvested()
-  //   getInvested = ethers.utils.formatEther(getInvested.toString())
-
-  //   console.log("===============================")
-  //   console.log("🚀 get Contract Bankroll", getInvested)
-  //   console.log(
-  //     `${numerator} <= ${denominator} : ${numerator <= denominator}`
-  //   )
-  //   console.log("===============================")
-
-  //   await this.game.bet(value, {
-  //     from: alice
-  //   })
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log(
-  //     "🚀 balance - Alice",
-  //     ethers.utils.formatEther(balanceAlice.toString())
-  //   )
-
-  //   const getLastBet = await this.game.getLastBet({ from: alice })
-  //   console.log(`🚀 getLastBet :
-  //   playerAddress : ${getLastBet["0"]}
-  //   amountBetted : ${getLastBet["1"]}
-  //   numberRolled : ${getLastBet["2"]}
-  //   winAmount : ${ethers.utils.formatEther(getLastBet["3"].toString())}
-  //   isClaimed : ${getLastBet["4"]}
-  //   isWinned : ${getLastBet["5"]}`)
-
-  //   console.log("advanceBlockTo - 1 minutes")
-  //   //TODO create getter & setter for minTimeToWithdraw = 604800
-  //   await time.increase(30)
-
-  //   //TODO manage loose case
-  //   await this.game.claimBonus({ from: alice })
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log(
-  //     "🚀 ending balance - Alice",
-  //     ethers.utils.formatEther(balanceAlice.toString())
-  //   )
-
-  //   getInvested = await this.game.getInvested()
-  //   getInvested = ethers.utils.formatEther(getInvested.toString())
-  //   console.log("🚀 get Contract Bankroll", getInvested)
-  // })
-
-  // it("Tests", async () => {
-  //   let balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log("🚀 starting balance - Alice", balanceAlice.toString())
-
-  //   // token.increaseAllowance(receiver.address, 1000)
-  //   // await this.cake.approve(this.chef.address, "100", { from: alice })
-  //   await this.cake.approve(this.game.address, "10", { from: alice })
-
-  //   console.log("🚀 betting 10 Cakes ")
-
-  //   await this.game.bet(10, {
-  //     from: alice
-  //   })
-
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log("🚀 balance - Alice", balanceAlice.toString())
-
-  //   const getContractBalance = await this.game.getContractBalance()
-  //   console.log("🚀 balance - Contract", getContractBalance.toString())
-  //   //TODO Should be equals to zero
-
-  //   balanceSirup = await this.syrup.balanceOf(this.game.address)
-  //   console.log("🚀 balance Staking - Game", balanceSirup.toString())
-
-  //   // const balanceInGame = await this.game.getBalance(alice)
-  //   // console.log("🚀 balance Game - Alice", balanceInGame.toString())
-
-  //   const getTotalBalance = await this.game.getTotalBalance()
-  //   console.log("🚀 getTotalBalance", getTotalBalance.toString())
-  //   //TODO SgetTotalBalance sould = balanceSirup
-  // })
-
-  // it("Tests", async () => {
-  //   let balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log("🚀 balanceAlice", balanceAlice.toString())
-
-  //   await this.cake.approve(this.chef.address, "100", { from: alice })
-
-  //   console.log("enterStaking - 25")
-
-  //   await this.chef.enterStaking("25", { from: alice })
-
-  //   let balanceSirup = await this.syrup.balanceOf(alice)
-  //   console.log("🚀 balanceSirup", balanceSirup.toString())
-
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log("🚀 balanceAlice", balanceAlice.toString())
-
-  //   //https://docs.openzeppelin.com/test-helpers/0.5/api#time
-  //   // console.log("advanceBlockTo - 10")
-  //   // await time.advanceBlockTo("1")
-  //   // balanceAlice = await this.cake.balanceOf(alice)
-  //   // console.log("🚀 balanceAlice", balanceAlice.toString())
-
-  //   console.log("leaveStaking - 25")
-
-  //   await this.chef.leaveStaking("25", { from: alice })
-  //   balanceSirup = await this.syrup.balanceOf(alice)
-  //   console.log("🚀 balanceSirup", balanceSirup.toString())
-
-  //   balanceAlice = await this.cake.balanceOf(alice)
-  //   console.log("🚀 balanceAlice", balanceAlice.toString())
-  // })
-
-  //     it('staking/unstaking', async () => {
-  //       await this.chef.add('1000', this.lp1.address, true, { from: minter });
-  //       await this.chef.add('1000', this.lp2.address, true, { from: minter });
-  //       await this.chef.add('1000', this.lp3.address, true, { from: minter });
-
-  //       await this.lp1.approve(this.chef.address, '10', { from: alice });
-  //       await this.chef.deposit(1, '2', { from: alice }); //0
-  //       await this.chef.withdraw(1, '2', { from: alice }); //1
-
-  //       await this.cake.approve(this.chef.address, '250', { from: alice });
-  //       await this.chef.enterStaking('240', { from: alice }); //3
-  //       assert.equal((await this.syrup.balanceOf(alice)).toString(), '240');
-  //       assert.equal((await this.cake.balanceOf(alice)).toString(), '10');
-  //       await this.chef.enterStaking('10', { from: alice }); //4
-  //       assert.equal((await this.syrup.balanceOf(alice)).toString(), '250');
-  //       assert.equal((await this.cake.balanceOf(alice)).toString(), '249');
-  //       await this.chef.leaveStaking(250);
-  //       assert.equal((await this.syrup.balanceOf(alice)).toString(), '0');
-  //       assert.equal((await this.cake.balanceOf(alice)).toString(), '749');
-
-  //     });
+  it("[OK] should claim bonus if win a game", async () => {
+    const MAX_ITERATIONS = 50
+
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i, counter, wins, looses, playerParams
+    looses = wins = counter = 0
+
+    for (i = 0; i < players.length; i++) {
+      if (counter == MAX_ITERATIONS) {
+        await this.game.pause(minterParams)
+        await this.game.forceDivestOfAllInvestors(minterParams)
+        await this.game.unpause(minterParams)
+        break
+      }
+
+      if (i == MAX_INVESTORS) {
+        //       pause and divest all players
+        await this.game.pause({
+          from: minter
+        })
+        await this.game.forceDivestOfAllInvestors({
+          from: minter
+        })
+        await this.game.unpause({
+          from: minter
+        })
+        getInvestors = await this.game.getInvestors()
+        i = 0
+      }
+
+      player = players[i]
+      playerParams = { from: player }
+
+      await this.cake.approve(this.game.address, value, playerParams)
+
+      await this.game.bet(value, playerParams)
+
+      const getLastBet = await this.game.getLastBet(playerParams)
+
+      if (getLastBet["5"]) break
+
+      counter++
+    }
+    await this.game.claimBonus(playerParams)
+  })
+
+  it("[OK] should not claim bonus if loose a game", async () => {
+    const MAX_ITERATIONS = 50
+
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i, counter, wins, looses, playerParams
+    looses = wins = counter = 0
+
+    for (i = 0; i < players.length; i++) {
+      if (counter == MAX_ITERATIONS) {
+        await this.game.pause(minterParams)
+        await this.game.forceDivestOfAllInvestors(minterParams)
+        await this.game.unpause(minterParams)
+        break
+      }
+
+      if (i == MAX_INVESTORS) {
+        //pause and divest all players
+        await this.game.pause({
+          from: minter
+        })
+        await this.game.forceDivestOfAllInvestors({
+          from: minter
+        })
+        await this.game.unpause({
+          from: minter
+        })
+        getInvestors = await this.game.getInvestors()
+        i = 0
+      }
+
+      player = players[i]
+      playerParams = { from: player }
+
+      await this.cake.approve(this.game.address, value, playerParams)
+
+      await this.game.bet(value, playerParams)
+
+      const getLastBet = await this.game.getLastBet(playerParams)
+
+      if (!getLastBet["5"]) break
+
+      counter++
+    }
+    try {
+      await this.game.claimBonus(playerParams)
+    } catch (error) {
+      assert(error)
+    }
+  })
+
+  it("[OK] should not claim bonus for player not in game", async () => {
+    const MAX_ITERATIONS = 50
+
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i, counter, wins, looses, playerParams
+    looses = wins = counter = 0
+
+    for (i = 0; i < players.length; i++) {
+      if (counter == MAX_ITERATIONS) {
+        await this.game.pause(minterParams)
+        await this.game.forceDivestOfAllInvestors(minterParams)
+        await this.game.unpause(minterParams)
+        break
+      }
+
+      if (i == MAX_INVESTORS) {
+        //pause and divest all players
+        await this.game.pause({
+          from: minter
+        })
+        await this.game.forceDivestOfAllInvestors({
+          from: minter
+        })
+        await this.game.unpause({
+          from: minter
+        })
+        getInvestors = await this.game.getInvestors()
+        i = 0
+      }
+
+      player = players[i]
+      playerParams = { from: player }
+
+      await this.cake.approve(this.game.address, value, playerParams)
+
+      await this.game.bet(value, playerParams)
+
+      const getLastBet = await this.game.getLastBet(playerParams)
+
+      if (getLastBet["5"]) break
+    }
+
+    try {
+      await this.game.claimBonus({ from: dev })
+    } catch (error) {
+      assert(error)
+    }
+  })
+
+  it(`[OK] should bet and claim after waiting for timelock ${MIN_TIME_TO_WITHDRAW}ms`, async () => {
+    const value = ethers.utils.parseEther("1")
+    const player = players[0]
+    const playerParams = { from: player }
+
+    await this.cake.approve(this.game.address, value, playerParams)
+    await this.game.bet(value, playerParams)
+
+    // console.log(`advance block to ${MIN_TIME_TO_WITHDRAW}ms`)
+    await time.increase(MIN_TIME_TO_WITHDRAW)
+
+    await this.game.claimBet(playerParams)
+  })
+
+  it(`[OK] should throw error on bet and claim without waiting for timelock ${MIN_TIME_TO_WITHDRAW}ms`, async () => {
+    try {
+      const value = ethers.utils.parseEther("1")
+      const player = players[0]
+      const playerParams = { from: player }
+
+      await this.cake.approve(this.game.address, value, playerParams)
+      await this.game.bet(value, playerParams)
+
+      await this.game.claimBet(playerParams)
+    } catch (error) {
+      assert(error)
+    }
+  })
+
+  it(`[OK] should enter multiples players until maxplayers(${MAX_INVESTORS}) error thrown`, async () => {
+    let value = ethers.utils.parseEther("1")
+    let player, i, playerParams
+
+    try {
+      for (i = 0; i < players.length; i++) {
+        player = players[i]
+        playerParams = { from: player }
+
+        await this.cake.approve(this.game.address, value, playerParams)
+        await this.game.bet(value, playerParams)
+      }
+    } catch (error) {
+      if (i == MAX_INVESTORS) {
+        return assert(error)
+      }
+    }
+    assert(false)
+  })
+
+  it("[OK] should enter multiples times in game and keep coherent Win/Loose ratio", async () => {
+    const MAX_ITERATIONS = 200
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i, counter, wins, looses
+    looses = wins = counter = 0
+
+    for (i = 0; i < players.length; i++) {
+      if (counter == MAX_ITERATIONS) {
+        await this.game.pause(minterParams)
+        await this.game.forceDivestOfAllInvestors(minterParams)
+        await this.game.unpause(minterParams)
+        break
+      }
+
+      if (i == MAX_INVESTORS) {
+        //pause and divest all players
+        await this.game.pause(minterParams)
+        await this.game.forceDivestOfAllInvestors(minterParams)
+        await this.game.unpause(minterParams)
+        getInvestors = await this.game.getInvestors()
+        i = 0
+      }
+
+      player = players[i]
+      let playerParams = { from: player }
+
+      await this.cake.approve(this.game.address, value, playerParams)
+
+      await this.game.bet(value, playerParams)
+
+      const getLastBet = await this.game.getLastBet(playerParams)
+
+      if (getLastBet["5"]) wins++
+      else looses++
+
+      counter++
+    }
+
+    // console.log(`**********************************`)
+    // console.log(
+    //   `🚀 END : iterations : ${counter} - win ratio ${wins} - loose ratio ${looses}`
+    // )
+    // console.log(`**********************************`)
+
+    assert.equal(
+      counter,
+      MAX_ITERATIONS,
+      `Counter should be equal to ${MAX_ITERATIONS} - Have ${counter}`
+    )
+
+    var percentWin = PERCENT_WIN_DECIMALS * counter
+
+    const winsCondition =
+      wins >= percentWin - ACCEPTED_MARGIN &&
+      wins <= percentWin + ACCEPTED_MARGIN
+    assert(winsCondition, `Win ratio seem's not good : ${wins}`)
+
+    var percentLoose = PERCENT_LOOSE_DECIMALS * counter
+    const loosesCondition =
+      looses >= percentLoose - ACCEPTED_MARGIN &&
+      looses <= percentLoose + ACCEPTED_MARGIN
+    assert(loosesCondition, `Loose ratio seem's not good : ${looses}`)
+  })
+
+  it(`[OK] admin should divest all players`, async () => {
+    assert(
+      players.length > MAX_INVESTORS,
+      "need more players to launch this test"
+    )
+
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i
+    for (i = 0; i < players.length; i++) {
+      if (i == MAX_INVESTORS) {
+        await this.game.pause(minterParams)
+        await this.game.forceDivestOfAllInvestors(minterParams)
+        await this.game.unpause(minterParams)
+        break
+      }
+
+      player = players[i]
+      let playerParams = { from: player }
+
+      await this.cake.approve(this.game.address, value, playerParams)
+      await this.game.bet(value, playerParams)
+    }
+  })
+
+  it(`[OK] player should not divest all players`, async () => {
+    assert(
+      players.length > MAX_INVESTORS,
+      "need more players to launch this test"
+    )
+
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i
+    try {
+      for (i = 0; i < players.length; i++) {
+        if (i == MAX_INVESTORS) {
+          await this.game.pause(minterParams)
+          await this.game.forceDivestOfAllInvestors({ from: player })
+          await this.game.unpause(minterParams)
+          break
+        }
+
+        player = players[i]
+        let playerParams = { from: player }
+
+        await this.cake.approve(this.game.address, value, playerParams)
+        await this.game.bet(value, playerParams)
+      }
+    } catch (error) {
+      assert(error)
+    }
+  })
+
+  ///
+  /// EMERGENCY
+  ///
+  it(`[OK] admin should unstakeAll`, async () => {
+    assert(
+      players.length > MAX_INVESTORS,
+      "need more players to launch this test"
+    )
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i
+    for (i = 0; i < players.length; i++) {
+      if (i == MAX_INVESTORS) {
+        await this.game.unstakeAll(minterParams)
+        break
+      }
+
+      player = players[i]
+      let playerParams = { from: player }
+
+      await this.cake.approve(this.game.address, value, playerParams)
+      await this.game.bet(value, playerParams)
+    }
+  })
+
+  it(`[OK] not admin should not unstakeAll`, async () => {
+    assert(
+      players.length > MAX_INVESTORS,
+      "need more players to launch this test"
+    )
+    let value = ethers.utils.parseEther("1")
+    let player, i
+
+    try {
+      for (i = 0; i < players.length; i++) {
+        if (i == MAX_INVESTORS) {
+          await this.game.unstakeAll({ from: dev })
+          break
+        }
+
+        player = players[i]
+        let playerParams = { from: player }
+
+        await this.cake.approve(this.game.address, value, playerParams)
+        await this.game.bet(value, playerParams)
+      }
+    } catch (error) {
+      assert(error)
+    }
+  })
+
+  it(`[OK] admin should emergencyWithdrawal`, async () => {
+    assert(
+      players.length > MAX_INVESTORS,
+      "need more players to launch this test"
+    )
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i
+    for (i = 0; i < players.length; i++) {
+      if (i == MAX_INVESTORS) {
+        await this.game.pause(minterParams)
+        await this.game.emergencyWithdrawal(minterParams)
+        await this.game.unpause(minterParams)
+        break
+      }
+
+      player = players[i]
+      let playerParams = { from: player }
+
+      await this.cake.approve(this.game.address, value, playerParams)
+      await this.game.bet(value, playerParams)
+    }
+  })
+
+  it(`[OK] not admin should not emergencyWithdrawal`, async () => {
+    assert(
+      players.length > MAX_INVESTORS,
+      "need more players to launch this test"
+    )
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i
+
+    try {
+      for (i = 0; i < players.length; i++) {
+        if (i == MAX_INVESTORS) {
+          await this.game.pause(minterParams)
+          await this.game.emergencyWithdrawal({ from: dev })
+          await this.game.unpause(minterParams)
+          break
+        }
+
+        player = players[i]
+        let playerParams = { from: player }
+
+        await this.cake.approve(this.game.address, value, playerParams)
+        await this.game.bet(value, playerParams)
+      }
+    } catch (error) {
+      assert(error)
+    }
+  })
+
+  it(`[OK] admin should remburseStartedBankroll`, async () => {
+    assert(
+      players.length > MAX_INVESTORS,
+      "need more players to launch this test"
+    )
+    let minterParams = { from: minter }
+    let value = ethers.utils.parseEther("1")
+    let player, i
+    for (i = 0; i < players.length; i++) {
+      if (i == MAX_INVESTORS) {
+        await this.game.remburseStartedBankroll(minterParams)
+        break
+      }
+
+      player = players[i]
+      let playerParams = { from: player }
+
+      await this.cake.approve(this.game.address, value, playerParams)
+      await this.game.bet(value, playerParams)
+    }
+  })
+
+  it(`[OK] not admin should not remburseStartedBankroll`, async () => {
+    assert(
+      players.length > MAX_INVESTORS,
+      "need more players to launch this test"
+    )
+    let value = ethers.utils.parseEther("1")
+    let player, i
+
+    try {
+      for (i = 0; i < players.length; i++) {
+        if (i == MAX_INVESTORS) {
+          await this.game.remburseStartedBankroll({ from: dev })
+          break
+        }
+
+        player = players[i]
+        let playerParams = { from: player }
+
+        await this.cake.approve(this.game.address, value, playerParams)
+        await this.game.bet(value, playerParams)
+      }
+    } catch (error) {
+      assert(error)
+    }
+  })
 })

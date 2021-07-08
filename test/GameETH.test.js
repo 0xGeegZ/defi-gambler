@@ -30,100 +30,100 @@ contract(
       })
     })
 
-    it("Tests", async () => {
-      // await this.game.bet({ from: minter })
-      // await this.game.bet({ from: alice })
-      // await this.game.newInvestor({
-      //   from: alice,
-      //   value: ethers.utils.parseEther("0.5")
-      // })
-      // const numerator =
-      // const numeratorTx = await this.game.numerator({
-      //   from: alice,
-      //   value: ethers.utils.parseEther("0.3")
-      // })
-      // const numerator = await numeratorTx.wait()
-      // const numerator = await this.game.numerator({
-      //   value: ethers.utils.parseEther("0.3")
-      // })
-      // const numerator = await this.game.numerator(
-      //   ethers.utils.parseEther("0.1")
-      // )
-      // const denominator = await this.game.denominator()
-      // console.log("===============================")
-      // console.log(`${numerator} <= ${denominator}`)
-      // console.log(numerator <= denominator)
-      // console.log("===============================")
-      // assert(numerator <= denominator)
-      // alice, bob, carol, jean, peter, wiliam, julie, maurice, francis, elena, miranda
-      // const balanceBefore = await this.game.getBalance(alice)
-      // const balanceInitial = await balance.current(alice)
-      // console.log(
-      //   `Alice Initial Balance : ${ethers.utils.formatEther(
-      //     balanceInitial.toString()
-      //   )}`
-      // )
-      // const payable = { value: ethers.utils.parseEther("0.1") }
-      // await this.game.bet({
-      //   from: alice,
-      //   ...payable
-      // })
-      // const balanceAfter = await this.game.getBalance(alice)
-      // // console.log(`${ethers.utils.formatEther(balanceAfter.toString())}`)
-      // const bet = await this.game.getBet(0)
-      // console.log(`${JSON.stringify(bet)}`)
-      // const bet2 = await this.game.getLastBet({ from: alice })
-      // console.log(`${JSON.stringify(bet2)}`)
-      // const claim = await this.game.claim({ from: alice })
-      // console.log(`${claim.toString()}`)
-      // await this.game.claim({ from: alice })
-      // console.log(`${ethers.utils.formatEther(bet2[1].toString())}`)
-      // assert.equal(ethers.utils.formatEther(balanceAfter.toString()), "0.091")
-      // await this.game.bet({
-      //   from: alice,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: bob,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: carol,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: jean,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: peter,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: wiliam,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: julie,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: maurice,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: francis,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: elena,
-      //   ...payable
-      // })
-      // await this.game.bet({
-      //   from: miranda,
-      //   ...payable
-      // })
-    })
+    // it("Tests", async () => {
+    // await this.game.bet({ from: minter })
+    // await this.game.bet({ from: alice })
+    // await this.game.newInvestor({
+    //   from: alice,
+    //   value: ethers.utils.parseEther("0.5")
+    // })
+    // const numerator =
+    // const numeratorTx = await this.game.numerator({
+    //   from: alice,
+    //   value: ethers.utils.parseEther("0.3")
+    // })
+    // const numerator = await numeratorTx.wait()
+    // const numerator = await this.game.numerator({
+    //   value: ethers.utils.parseEther("0.3")
+    // })
+    // const numerator = await this.game.numerator(
+    //   ethers.utils.parseEther("0.1")
+    // )
+    // const denominator = await this.game.denominator()
+    // console.log("===============================")
+    // console.log(`${numerator} <= ${denominator}`)
+    // console.log(numerator <= denominator)
+    // console.log("===============================")
+    // assert(numerator <= denominator)
+    // alice, bob, carol, jean, peter, wiliam, julie, maurice, francis, elena, miranda
+    // const balanceBefore = await this.game.getBalance(alice)
+    // const balanceInitial = await balance.current(alice)
+    // console.log(
+    //   `Alice Initial Balance : ${ethers.utils.formatEther(
+    //     balanceInitial.toString()
+    //   )}`
+    // )
+    // const payable = { value: ethers.utils.parseEther("0.1") }
+    // await this.game.bet({
+    //   from: alice,
+    //   ...payable
+    // })
+    // const balanceAfter = await this.game.getBalance(alice)
+    // // console.log(`${ethers.utils.formatEther(balanceAfter.toString())}`)
+    // const bet = await this.game.getBet(0)
+    // console.log(`${JSON.stringify(bet)}`)
+    // const bet2 = await this.game.getLastBet({ from: alice })
+    // console.log(`${JSON.stringify(bet2)}`)
+    // const claim = await this.game.claim({ from: alice })
+    // console.log(`${claim.toString()}`)
+    // await this.game.claim({ from: alice })
+    // console.log(`${ethers.utils.formatEther(bet2[1].toString())}`)
+    // assert.equal(ethers.utils.formatEther(balanceAfter.toString()), "0.091")
+    // await this.game.bet({
+    //   from: alice,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: bob,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: carol,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: jean,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: peter,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: wiliam,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: julie,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: maurice,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: francis,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: elena,
+    //   ...payable
+    // })
+    // await this.game.bet({
+    //   from: miranda,
+    //   ...payable
+    // })
+    // })
 
     // it("should enter", async () => {
     //   const payable = { value: ethers.utils.parseEther("0.1") }

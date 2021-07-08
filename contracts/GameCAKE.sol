@@ -342,16 +342,17 @@ contract GameCAKE {
         CakeChef(cakeChef).leaveStaking(balanceOfStakedWant);
     }
 
-    function emergencyWithdrawal() public payable {
-        // require(paused, "Contract is not stopped"); // onlyIfNotStopped
+    function emergencyWithdrawal() public {
+        require(paused, "Contract is not stopped"); // onlyIfNotStopped
         require(msg.sender == owner, "Only for owner"); //onlyOwner
-        require(msg.value != 0, "reject value"); //rejectValue
+        // require(msg.value != 0, "reject value"); //rejectValue
 
         // get money back to players
         forceDivestOfAllInvestors();
 
         //unstake all
         unstakeAll();
+
         // send
         uint256 _want = cake.balanceOf(address(this));
         cake.safeTransfer(msg.sender, _want);
