@@ -20,7 +20,16 @@ require("@nomiclabs/hardhat-truffle5")
 module.exports = {
   // This is a sample solc configuration that specifies which version of solc to use
   solidity: {
-    version: "0.6.12",
+    compilers: [
+      {
+        version: "0.8.4"
+      },
+      {
+        version: "0.6.12"
+      }
+    ],
+    // version: "0.8.4",
+
     settings: {
       optimizer: {
         enabled: true,

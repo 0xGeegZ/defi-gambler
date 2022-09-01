@@ -548,6 +548,11 @@ contract GameCAKE {
 
     function getHouseProfit() public view returns (uint256) {
         return houseProfit;
+        // return getTotalBalance().sub(getInvested());
+    }
+
+    function getStartedBankroll() public view returns (uint256) {
+        return startedBankroll;
     }
 
     function getInvested() public view returns (uint256) {
@@ -683,8 +688,17 @@ contract GameCAKE {
     /// RANDOM FUNCTIONS
     ///
 
-    // TODO add this contract to more faire random
-    // https://github.com/pooltogether/uniform-random-number/blob/master/contracts/UniformRandomNumber.sol
+    /**
+     * @dev Generate array of random bytes
+     * @notice This function will generate a random numbre beetween 0 and 10000
+     * @return uint256
+     */
+    function _rand() internal view returns (uint256) {
+        return
+            uint256(
+                keccak256(abi.encodePacked(now, block.difficulty, msg.sender))
+            ) % 10000;
+    }
 
     /**
      * @dev Generate array of random bytes
@@ -713,16 +727,4 @@ contract GameCAKE {
     //         mstore(add(_ret, 0x20), _rand)
     //     }
     // }
-
-    /**
-     * @dev Generate array of random bytes
-     * @notice This function will generate a random numbre beetween 0 and 10000
-     * @return uint256
-     */
-    function _rand() internal view returns (uint256) {
-        return
-            uint256(
-                keccak256(abi.encodePacked(now, block.difficulty, msg.sender))
-            ) % 10000;
-    }
 }

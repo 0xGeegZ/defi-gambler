@@ -808,13 +808,10 @@
     typechain "^1.0.5"
     typechain-target-ethers "^1.0.4"
 
-"@chainlink/contracts@^0.1.9":
-  version "0.1.9"
-  resolved "https://registry.yarnpkg.com/@chainlink/contracts/-/contracts-0.1.9.tgz#b2e77b87d7eea737cd668c4c727660e7b55cd236"
-  integrity sha512-7UIqkdzarbK876YZAiGKeYj/ujG3FPVVxWLACxbdyacM+ryIAgcZMkaaavt5+NwVXJvVjwWmucWTDCTy0JP8ag==
-  optionalDependencies:
-    "@truffle/contract" "^4.3.8"
-    ethers "^4.0.45"
+"@chainlink/contracts@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@chainlink/contracts/-/contracts-0.2.1.tgz#0815901baa4634b7b41b4e747f3425e2c968fb85"
+  integrity sha512-mAQgPQKiqW3tLMlp31NgcnXpwG3lttgKU0izAqKiirJ9LH7rQ+O0oHIVR5Qp2yuqgmfbLsgfdLo4GcVC8IFz3Q==
 
 "@chainlink/test-helpers@0.0.5":
   version "0.0.5"
@@ -2452,10 +2449,10 @@
     find-up "^4.1.0"
     fs-extra "^8.1.0"
 
-"@openzeppelin/contracts@^3.4.0":
-  version "3.4.1"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-3.4.1.tgz#03c891fec7f93be0ae44ed74e57a122a38732ce7"
-  integrity sha512-cUriqMauq1ylzP2TxePNdPqkwI7Le3Annh4K9rrpvKfSBB/bdW+Iu1ihBaTIABTAAJ85LmKL5SSPPL9ry8d1gQ==
+"@openzeppelin/contracts@^4.2.0":
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.2.0.tgz#260d921d99356e48013d9d760caaa6cea35dc642"
+  integrity sha512-LD4NnkKpHHSMo5z9MvFsG4g1xxZUDqV3A3Futu3nvyfs4wPwXxqOgMaxOoa2PeyGL2VNeSlbxT54enbQzGcgJQ==
 
 "@openzeppelin/test-helpers@^0.5.10":
   version "0.5.11"
@@ -3055,7 +3052,7 @@
     crypto-js "^3.1.9-1"
     debug "^4.3.1"
 
-"@truffle/contract@^4.0.35", "@truffle/contract@^4.3.8":
+"@truffle/contract@^4.0.35":
   version "4.3.21"
   resolved "https://registry.yarnpkg.com/@truffle/contract/-/contract-4.3.21.tgz#a90a363564ea63ff3a42550cb0b97ffdd4972880"
   integrity sha512-J4nYQVoOL29G7Rg2rmbHbsyQUx/Oj41HBHQOafjltnxppYuFk8OPW0EBm1o7gOAkfgFy4oJPhOVFucZ6JqY+GQ==
