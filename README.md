@@ -15,9 +15,9 @@ Working FIles :
 
 # HOW TO USE IT
 
-1. Install Dépendencies
+## Instal dependencies
 ```bash
-yarn install
+yarn
 ```
 
 ## Test
@@ -31,3 +31,8 @@ yarn test
 ```bash
 yarn coverage
 ```
+
+I tried to implement project with both Truffle and Hardhat to check differences between those two main tools for develoipping smart contracts. 
+
+TODO : 
+Finalize test coverage and manage multiple contracts implementation to handle 
